@@ -43,7 +43,7 @@ def main():
     st.pyplot(fig)
 
     # Countdown to September 2025
-    target_date = datetime(2025, 9, 5)
+    target_date = datetime(2025, 9, 10)
     current_date = datetime.now()
     countdown = (target_date - current_date).days
     st.write(f"### Countdown to September 5, 2025: {countdown} days")
