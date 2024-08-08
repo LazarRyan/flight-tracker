@@ -2,6 +2,23 @@ import subprocess
 import os
 import streamlit as st
 
+# Ensure dependencies are installed
+def install_dependencies():
+    dependencies = [
+        "streamlit",
+        "pandas",
+        "tqdm",
+        "requests",
+        "scikit-learn",
+        "matplotlib",
+        "joblib"
+    ]
+    for package in dependencies:
+        subprocess.run(["pip", "install", package])
+
+# Run the dependency installation
+install_dependencies()
+
 # Define the paths to the scripts relative to the current file
 base_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(base_dir, "src")
