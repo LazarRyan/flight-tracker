@@ -20,7 +20,7 @@ def get_access_token(client_id, client_secret):
     return response_json["access_token"]
 
 # Function to fetch flight data
-def fetch_flight_data(access_token, date, origin, destination, max_results=10):
+def fetch_flight_data(access_token, date, origin, destination, max_results=50):
     url = "https://test.api.amadeus.com/v2/shopping/flight-offers"
     headers = {
         "Authorization": f"Bearer {access_token}"

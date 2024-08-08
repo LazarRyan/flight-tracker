@@ -42,7 +42,7 @@ def fetch_flight_data(access_token, date, origin, destination, max_results=50):
     if response.status_code == 200:
         return response.json()
     else:
-        print(f"Error fetching data for {date}: {response.json()}")
+        st.error(f"Error fetching data for {date}: {response.json()}")
         return None
 
 def save_to_csv(data, filename):
@@ -86,28 +86,44 @@ def fetch_data():
 # Load Data
 def load_data():
     try:
+        if not os.path.exists('flight_prices.csv'):
+            st.error("flight_prices.csv does not exist. No data to load.")
+            return False
         df = pd.read_csv('flight_prices.csv')
+        if 'Date' not in df.columns:
+            st.error("'Date' column is missing in the data.")
+            return False
         df['Date'] = pd.to_datetime(df['Date'])
         df.to_csv('flight_prices_clean.csv', index=False)
+        return True
     except Exception as e:
         st.error(f"Error loading data: {e}")
+        return False
 
 # Clean Data
 def clean_data():
     try:
+        if not os.path.exists('flight_prices_clean.csv'):
+            st.error("flight_prices_clean.csv does not exist. No data to clean.")
+            return False
         df = pd.read_csv('flight_prices_clean.csv')
         df = df.drop_duplicates()
         df.to_csv('flight_prices_clean.csv', index=False)
+        return True
     except Exception as e:
         st.error(f"Error cleaning data: {e}")
+        return False
 
 # Train and Predict
 def train_model():
     try:
+        if not os.path.exists('flight_prices_clean.csv'):
+            st.error("flight_prices_clean.csv does not exist. No data to train on.")
+            return False
         df = pd.read_csv('flight_prices_clean.csv')
         if df.empty:
             st.error("No data available to train the model.")
-            return
+            return False
 
         df['Date'] = pd.to_datetime(df['Date'])
         df['DaysFromNow'] = (df['Date'] - datetime.now()).dt.days
@@ -124,13 +140,21 @@ def train_model():
         future_df['DaysFromNow'] = (future_df['Date'] - datetime.now()).dt.days
         future_df['PredictedPrice'] = model.predict(future_df[['DaysFromNow']])
         future_df.to_csv('future_prices.csv', index=False)
+        return True
     except Exception as e:
         st.error(f"Error training model: {e}")
+        return False
 
 # Streamlit App
 def load_data_app(csv_file):
     try:
+        if not os.path.exists(csv_file):
+            st.error(f"{csv_file} does not exist.")
+            return pd.DataFrame()
         df = pd.read_csv(csv_file)
+        if 'Date' not in df.columns:
+            st.error(f"'Date' column is missing in {csv_file}.")
+            return pd.DataFrame()
         df['Date'] = pd.to_datetime(df['Date'])
         return df
     except Exception as e:
@@ -139,6 +163,9 @@ def load_data_app(csv_file):
 
 def load_model_app(model_file):
     try:
+        if not os.path.exists(model_file):
+            st.error(f"{model_file} does not exist.")
+            return None
         return joblib.load(model_file)
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -148,10 +175,14 @@ def main():
     st.title("Flight Price Predictor")
 
     with st.spinner("Fetching and processing data..."):
-        fetch_data()
-        load_data()
-        clean_data()
-        train_model()
+        data_fetched = fetch_data()
+        data_loaded = load_data()
+        data_cleaned = clean_data()
+        model_trained = train_model()
+
+    if not (data_loaded and data_cleaned and model_trained):
+        st.error("Unable to load data or model. Please check the logs for errors.")
+        return
 
     historical_csv = 'flight_prices_clean.csv'
     future_csv = 'future_prices.csv'
