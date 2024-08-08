@@ -1,4 +1,4 @@
-#!/home/ryanlazar/flight-price-tracker/venv/bin/python3
+#!/home/ryanlazar/flight-tracker/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
