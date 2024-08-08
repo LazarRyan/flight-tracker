@@ -2,14 +2,15 @@ import subprocess
 import os
 import streamlit as st
 
-# Define the paths to the scripts
-base_dir = os.path.expanduser("~/flight-tracker/src")
+# Define the paths to the scripts relative to the current file
+base_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(base_dir, "src")
 scripts = [
-    os.path.join(base_dir, "fetch_data.py"),
-    os.path.join(base_dir, "load_data.py"),
-    os.path.join(base_dir, "clean_data.py"),
-    os.path.join(base_dir, "train_predict.py"),
-    os.path.join(base_dir, "run_app.py")
+    os.path.join(src_dir, "fetch_data.py"),
+    os.path.join(src_dir, "load_data.py"),
+    os.path.join(src_dir, "clean_data.py"),
+    os.path.join(src_dir, "train_predict.py"),
+    os.path.join(src_dir, "run_app.py")
 ]
 
 # Function to run each script
