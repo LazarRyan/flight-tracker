@@ -85,43 +85,64 @@ def fetch_data():
 
 # Load Data
 def load_data():
-    df = pd.read_csv('flight_prices.csv')
-    df['Date'] = pd.to_datetime(df['Date'])
-    df.to_csv('flight_prices_clean.csv', index=False)
+    try:
+        df = pd.read_csv('flight_prices.csv')
+        df['Date'] = pd.to_datetime(df['Date'])
+        df.to_csv('flight_prices_clean.csv', index=False)
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
 
 # Clean Data
 def clean_data():
-    df = pd.read_csv('flight_prices_clean.csv')
-    df = df.drop_duplicates()
-    df.to_csv('flight_prices_clean.csv', index=False)
+    try:
+        df = pd.read_csv('flight_prices_clean.csv')
+        df = df.drop_duplicates()
+        df.to_csv('flight_prices_clean.csv', index=False)
+    except Exception as e:
+        st.error(f"Error cleaning data: {e}")
 
 # Train and Predict
 def train_model():
-    df = pd.read_csv('flight_prices_clean.csv')
-    df['Date'] = pd.to_datetime(df['Date'])
-    df['DaysFromNow'] = (df['Date'] - datetime.now()).dt.days
-    X = df[['DaysFromNow']]
-    y = df['Price']
-    
-    model = RandomForestRegressor()
-    model.fit(X, y)
-    
-    joblib.dump(model, 'flight_price_model.pkl')
+    try:
+        df = pd.read_csv('flight_prices_clean.csv')
+        if df.empty:
+            st.error("No data available to train the model.")
+            return
 
-    future_dates = pd.date_range(start='2024-12-02', end='2025-09-05')
-    future_df = pd.DataFrame(future_dates, columns=['Date'])
-    future_df['DaysFromNow'] = (future_df['Date'] - datetime.now()).dt.days
-    future_df['PredictedPrice'] = model.predict(future_df[['DaysFromNow']])
-    future_df.to_csv('future_prices.csv', index=False)
+        df['Date'] = pd.to_datetime(df['Date'])
+        df['DaysFromNow'] = (df['Date'] - datetime.now()).dt.days
+        X = df[['DaysFromNow']]
+        y = df['Price']
+        
+        model = RandomForestRegressor()
+        model.fit(X, y)
+        
+        joblib.dump(model, 'flight_price_model.pkl')
+
+        future_dates = pd.date_range(start='2024-12-02', end='2025-09-05')
+        future_df = pd.DataFrame(future_dates, columns=['Date'])
+        future_df['DaysFromNow'] = (future_df['Date'] - datetime.now()).dt.days
+        future_df['PredictedPrice'] = model.predict(future_df[['DaysFromNow']])
+        future_df.to_csv('future_prices.csv', index=False)
+    except Exception as e:
+        st.error(f"Error training model: {e}")
 
 # Streamlit App
 def load_data_app(csv_file):
-    df = pd.read_csv(csv_file)
-    df['Date'] = pd.to_datetime(df['Date'])
-    return df
+    try:
+        df = pd.read_csv(csv_file)
+        df['Date'] = pd.to_datetime(df['Date'])
+        return df
+    except Exception as e:
+        st.error(f"Error loading data for app: {e}")
+        return pd.DataFrame()
 
 def load_model_app(model_file):
-    return joblib.load(model_file)
+    try:
+        return joblib.load(model_file)
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
 
 def main():
     st.title("Flight Price Predictor")
@@ -139,6 +160,10 @@ def main():
     historical_df = load_data_app(historical_csv)
     future_df = load_data_app(future_csv)
     model = load_model_app(model_file)
+
+    if historical_df.empty or future_df.empty or model is None:
+        st.error("Unable to load data or model. Please check the logs for errors.")
+        return
 
     st.write("### Historical Flight Prices")
     st.dataframe(historical_df)
