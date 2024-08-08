@@ -41,6 +41,9 @@ def fetch_flight_data(access_token, date, origin, destination, max_results=50):
     response = requests.get(url, headers=headers, params=params)
     if response.status_code == 200:
         return response.json()
+    elif response.status_code == 429:
+        st.warning(f"Quota limit exceeded or too many requests for {date}. Using existing data if available.")
+        return None
     else:
         st.error(f"Error fetching data for {date}: {response.json()}")
         return None
@@ -78,10 +81,14 @@ def fetch_data():
                     "Destination": DESTINATION
                 }
                 all_data.append(offer_data)
-
-    # Ensure that the dataframe has the correct columns
-    df = pd.DataFrame(all_data, columns=["Date", "Price", "Origin", "Destination"])
-    df.to_csv("flight_prices.csv", index=False)
+    
+    if all_data:
+        df = pd.DataFrame(all_data, columns=["Date", "Price", "Origin", "Destination"])
+        df.to_csv("flight_prices.csv", index=False)
+    elif os.path.exists("flight_prices.csv"):
+        st.warning("Using existing data in flight_prices.csv due to quota limits.")
+    else:
+        st.error("No data fetched and no existing data available.")
 
 # Load Data
 def load_data():
@@ -175,7 +182,7 @@ def main():
     st.title("Flight Price Predictor")
 
     with st.spinner("Fetching and processing data..."):
-        data_fetched = fetch_data()
+        fetch_data()
         data_loaded = load_data()
         data_cleaned = clean_data()
         model_trained = train_model()
