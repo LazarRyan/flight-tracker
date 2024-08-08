@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-import datetime
+from datetime import datetime, timedelta, date
 from tqdm import tqdm
 import os
 from sklearn.ensemble import RandomForestRegressor
@@ -8,7 +8,6 @@ import joblib
 import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from datetime import datetime
 
 # Fetch Data
 def get_access_token(client_id, client_secret):
@@ -62,9 +61,8 @@ def fetch_data():
 
     access_token = get_access_token(CLIENT_ID, CLIENT_SECRET)
 
-    start_date = datetime.date.today()
-    end_date = start_date + datetime.timedelta(days=30)
-    delta = datetime.timedelta(days=1)
+    start_date = date.today()
+    end_date = start_date + timedelta(days=30)
 
     all_data = []
 
