@@ -46,7 +46,7 @@ def main():
     target_date = datetime(2025, 9, 10)
     current_date = datetime.now()
     countdown = (target_date - current_date).days
-    st.write(f"### Countdown to September 5, 2025: {countdown} days")
+    st.write(f"### Countdown to September 10, 2025: {countdown} days")
 
 if __name__ == "__main__":
     main()
