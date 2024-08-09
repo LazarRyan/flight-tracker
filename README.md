@@ -94,12 +94,16 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 # Set page configuration
+
 st.set_page_config(page_title="Italy 2025 - Tanner & Jill Tie The Knot")
+
 Imports: The app uses several Python libraries, including Streamlit for the web interface, pandas for data manipulation, numpy for numerical operations, JSON for data parsing, scikit-learn for machine learning, joblib for model saving/loading, matplotlib for plotting, and datetime for time-based operations.
+
 Page Configuration: The st.set_page_config() function sets the title of the browser tab to "Italy 2025 - Tanner & Jill Tie The Knot".
 
 # Data Loading and Cleaning
 python
+
 def load_data(filepath):
     df = pd.read_csv(filepath)
     st.write("Loaded data columns:", df.columns.tolist())  # Print the column names for debugging
