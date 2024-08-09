@@ -296,7 +296,7 @@ def main():
 
         st.write("Future Price Predictions")
         st.dataframe(future_df)
-
+        
 if __name__ == "__main__":
     main()
 
