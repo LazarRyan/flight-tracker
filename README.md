@@ -105,8 +105,11 @@ Page Configuration: The st.set_page_config() function sets the title of the brow
 python
 
 def load_data(filepath):
+    
     df = pd.read_csv(filepath)
+    
     st.write("Loaded data columns:", df.columns.tolist())  # Print the column names for debugging
+    
     return df
 
 def extract_price(df):
