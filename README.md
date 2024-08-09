@@ -76,14 +76,21 @@ Visualize Data: View interactive charts that display historical and predicted fl
 
 # Imports and Page Configuration
 python
-Copy code
+
 import streamlit as st
+
 import pandas as pd
+
 import numpy as np
+
 import json
+
 from sklearn.ensemble import RandomForestRegressor
+
 import joblib
+
 import matplotlib.pyplot as plt
+
 from datetime import datetime
 
 # Set page configuration
