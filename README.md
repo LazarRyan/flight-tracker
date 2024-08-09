@@ -162,9 +162,13 @@ Data Cleaning: The clean_data() function removes outliers, converts dates to dat
 python
 
 def preprocess_data(df):
+   
     df['DepartureDate'] = pd.to_datetime(df['DepartureDate'])
+    
     df['DayOfWeek'] = df['DepartureDate'].dt.dayofweek
+    
     df['Month'] = df['DepartureDate'].dt.month
+    
     return df
 
 def train_model(df):
@@ -199,21 +203,35 @@ Price Prediction: The predict_future_prices() function uses the trained model to
 python
 
 def plot_historical_prices(df):
+   
     plt.figure(figsize=(10, 5))
+    
     plt.plot(df['DepartureDate'], df['Price'], marker='o')
+    
     plt.title('Historical Flight Prices')
+    
     plt.xlabel('Departure Date')
+    
     plt.ylabel('Price (USD)')
+    
     plt.grid(True)
+    
     st.pyplot(plt)
 
 def plot_future_prices(future_df):
+    
     plt.figure(figsize=(10, 5))
+    
     plt.plot(future_df['DepartureDate'], future_df['PredictedPrice'], marker='o', color='orange')
+    
     plt.title('Predicted Future Flight Prices')
+    
     plt.xlabel('Departure Date')
+    
     plt.ylabel('Predicted Price (USD)')
+    
     plt.grid(True)
+    
     st.pyplot(plt)
 
 ### Historical Prices Plot: The plot_historical_prices() function generates a line chart showing the historical flight prices over time.
@@ -234,7 +252,9 @@ Countdown Timer: The display_countdown() function calculates the number of days 
 
 # Main Function
 python
+
 def main():
+    
     st.title("Italy 2025 - Tanner & Jill Tie The Knot")
 
     # Countdown to September 10, 2025
