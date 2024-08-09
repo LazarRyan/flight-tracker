@@ -60,7 +60,6 @@ source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 Install Dependencies:
 
 bash
-Copy code
 pip install -r requirements.txt
 Run the Streamlit App:
 
@@ -91,9 +90,9 @@ from datetime import datetime
 st.set_page_config(page_title="Italy 2025 - Tanner & Jill Tie The Knot")
 Imports: The app uses several Python libraries, including Streamlit for the web interface, pandas for data manipulation, numpy for numerical operations, JSON for data parsing, scikit-learn for machine learning, joblib for model saving/loading, matplotlib for plotting, and datetime for time-based operations.
 Page Configuration: The st.set_page_config() function sets the title of the browser tab to "Italy 2025 - Tanner & Jill Tie The Knot".
-Data Loading and Cleaning
+
+# Data Loading and Cleaning
 python
-Copy code
 def load_data(filepath):
     df = pd.read_csv(filepath)
     st.write("Loaded data columns:", df.columns.tolist())  # Print the column names for debugging
@@ -194,10 +193,11 @@ def display_countdown(target_date):
     today = datetime.today()
     days_left = (target_date - today).days
     st.metric(label="Days until September 10, 2025", value=days_left)
+
 Countdown Timer: The display_countdown() function calculates the number of days remaining until September 10, 2025, and displays it in the Streamlit app using a metric widget.
-Main Function
+
+# Main Function
 python
-Copy code
 def main():
     st.title("Italy 2025 - Tanner & Jill Tie The Knot")
 
