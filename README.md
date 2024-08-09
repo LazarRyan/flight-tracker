@@ -158,7 +158,9 @@ Price Extraction: The extract_price() function extracts price data from a nested
 Data Cleaning: The clean_data() function removes outliers, converts dates to datetime objects, and fills missing values, ensuring that the data is ready for analysis.
 
 # Model Training and Prediction
+
 python
+
 def preprocess_data(df):
     df['DepartureDate'] = pd.to_datetime(df['DepartureDate'])
     df['DayOfWeek'] = df['DepartureDate'].dt.dayofweek
@@ -166,17 +168,27 @@ def preprocess_data(df):
     return df
 
 def train_model(df):
+  
     X = df[['DayOfWeek', 'Month']]
+    
     y = df['Price']
+    
     model = RandomForestRegressor(n_estimators=100, random_state=42)
+    
     model.fit(X, y)
+    
     return model
 
 def predict_future_prices(model, future_df):
+    
     future_df['DayOfWeek'] = future_df['DepartureDate'].dt.dayofweek
+    
     future_df['Month'] = future_df['DepartureDate'].dt.month
+    
     X_future = future_df[['DayOfWeek', 'Month']]
+    
     future_df['PredictedPrice'] = model.predict(X_future)
+    
     return future_df
 
 Data Preprocessing: The preprocess_data() function adds features like the day of the week and month to the DataFrame, which are used in model training.
@@ -185,6 +197,7 @@ Price Prediction: The predict_future_prices() function uses the trained model to
 
 # Visualizations
 python
+
 def plot_historical_prices(df):
     plt.figure(figsize=(10, 5))
     plt.plot(df['DepartureDate'], df['Price'], marker='o')
@@ -208,9 +221,13 @@ def plot_future_prices(future_df):
 
 # Countdown Timer
 python
+
 def display_countdown(target_date):
+   
     today = datetime.today()
+    
     days_left = (target_date - today).days
+    
     st.metric(label="Days until September 10, 2025", value=days_left)
 
 Countdown Timer: The display_countdown() function calculates the number of days remaining until September 10, 2025, and displays it in the Streamlit app using a metric widget.
