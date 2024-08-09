@@ -113,8 +113,11 @@ def load_data(filepath):
     return df
 
 def extract_price(df):
+   
     # Check for the correct column name
+    
     price_column = 'price' if 'price' in df.columns else 'Price' if 'Price' in df.columns else None
+    
     if not price_column:
         st.error("The 'price' column is not found in the dataset.")
         return df
@@ -134,7 +137,9 @@ def extract_price(df):
     return df
 
 def clean_data(df):
+   
     df = extract_price(df)
+    
     if 'Price' not in df.columns:
         st.error("The 'Price' column could not be created. Cleaning process stopped.")
         return df
