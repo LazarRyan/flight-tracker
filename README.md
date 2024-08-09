@@ -2,21 +2,37 @@
 ## This repository contains a Streamlit application designed to predict flight prices and provide visual insights for an upcoming trip to Italy for Tanner and Jill's wedding on September 10th, 2025. The app also includes a countdown timer to the wedding date, providing users with a constant reminder of how many days are left until the big day.
 
 ### Table of Contents
+
 Overview
+
 Features
+
 Installation
+
 Usage
+
 Detailed Code Explanation
+
 Imports and Page Configuration
+
 Data Loading and Cleaning
+
 Model Training and Prediction
+
 Visualizations
+
 Countdown Timer
+
 Main Function
+
 Data Requirements
+
 Customization
+
 License
+
 Acknowledgements
+
 Overview
 
 The "Italy 2025 - Tanner & Jill Tie The Knot" app serves as a tool to track and predict flight prices leading up to a specific event. It is built using Streamlit, a powerful framework for creating web apps using Python. The app allows users to upload historical flight data, train a machine learning model, and predict future flight prices. Additionally, it visualizes the data through interactive charts and includes a countdown timer to the event.
