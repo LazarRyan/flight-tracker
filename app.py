@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
-import joblib
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import os
@@ -86,7 +85,51 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
     
     return pd.DataFrame(new_data)
 
-# ... (keep the existing preprocess_data, train_model, predict_future_prices, find_best_days_to_buy, and plot_price_predictions functions)
+# Function to preprocess data
+def preprocess_data(df):
+    df['DayOfWeek'] = df['DepartureDate'].dt.dayofweek
+    df['Month'] = df['DepartureDate'].dt.month
+    df['DaysToFlight'] = (df['DepartureDate'] - df['Date']).dt.days
+    return df
+
+# Function to train model
+def train_model(df):
+    X = df[['DayOfWeek', 'Month', 'DaysToFlight']]
+    y = df['Price']
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+    return model
+
+# Function to predict future prices
+def predict_future_prices(model, future_df):
+    X_future = future_df[['DayOfWeek', 'Month', 'DaysToFlight']]
+    future_df['PredictedPrice'] = model.predict(X_future)
+    return future_df
+
+# Function to find best days to buy
+def find_best_days_to_buy(future_df, n=5):
+    return future_df.nsmallest(n, 'PredictedPrice')
+
+# Function to plot price predictions
+def plot_price_predictions(future_df, best_days):
+    plt.figure(figsize=(12, 6))
+    plt.plot(future_df['DepartureDate'], future_df['PredictedPrice'], marker='', linewidth=2)
+    plt.scatter(best_days['DepartureDate'], best_days['PredictedPrice'], color='red', s=50, zorder=5)
+    plt.title('Predicted Flight Prices and Best Days to Buy')
+    plt.xlabel('Departure Date')
+    plt.ylabel('Predicted Price (USD)')
+    plt.grid(True, linestyle='--', alpha=0.7)
+    for _, row in best_days.iterrows():
+        plt.annotate(f"${row['PredictedPrice']:.2f}\n{row['DepartureDate'].strftime('%Y-%m-%d')}", 
+                     (row['DepartureDate'], row['PredictedPrice']),
+                     textcoords="offset points", xytext=(0,10), ha='center')
+    st.pyplot(plt)
+
+# Function to display countdown
+def display_countdown(target_date):
+    today = datetime.now().date()
+    days_left = (target_date - today).days
+    st.metric(label=f"Days until {target_date.strftime('%B %d, %Y')}", value=days_left)
 
 # Streamlit app
 def main():
