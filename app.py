@@ -12,7 +12,7 @@ from amadeus import Client, ResponseError
 import logging
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Amadeus API configuration
 AMADEUS_CLIENT_ID = st.secrets["AMADEUS_CLIENT_ID"]
@@ -29,35 +29,63 @@ def safe_float(x):
     except (ValueError, TypeError):
         return np.nan
 
+def safe_json_loads(x):
+    if not isinstance(x, str):
+        return x
+    try:
+        return json.loads(x)
+    except json.JSONDecodeError:
+        logging.warning(f"Failed to parse JSON: {x}")
+        return None
+
+def safe_eval(x):
+    if not isinstance(x, str):
+        return x
+    try:
+        return eval(x)
+    except:
+        logging.warning(f"Failed to eval: {x}")
+        return None
+
 def load_data(filepath):
     if os.path.exists(filepath):
-        df = pd.read_csv(filepath, header=None, names=['date', 'price', 'itineraries', 'carriers', 'price_details'])
-        
-        # Convert date string to datetime more explicitly
-        df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
-        
-        # Safely convert price to float
-        df['price'] = df['price'].apply(safe_float)
-        
-        # Safely parse JSON and list strings
-        df['itineraries'] = df['itineraries'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
-        df['carriers'] = df['carriers'].apply(lambda x: eval(x) if isinstance(x, str) else x)
-        df['price_details'] = df['price_details'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
-        
-        # Extract departure datetime from itineraries
-        def extract_departure(itinerary):
-            try:
-                return datetime.fromisoformat(itinerary[0]['segments'][0]['departure']['at'])
-            except (IndexError, KeyError, ValueError, TypeError):
-                return pd.NaT
+        try:
+            df = pd.read_csv(filepath, header=None, names=['date', 'price', 'itineraries', 'carriers', 'price_details'])
+            
+            # Convert date string to datetime more explicitly
+            df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
+            
+            # Safely convert price to float
+            df['price'] = df['price'].apply(safe_float)
+            
+            # Safely parse JSON and list strings
+            df['itineraries'] = df['itineraries'].apply(safe_json_loads)
+            df['carriers'] = df['carriers'].apply(safe_eval)
+            df['price_details'] = df['price_details'].apply(safe_json_loads)
+            
+            # Extract departure datetime from itineraries
+            def extract_departure(itinerary):
+                if not isinstance(itinerary, list) or not itinerary:
+                    return pd.NaT
+                try:
+                    return datetime.fromisoformat(itinerary[0]['segments'][0]['departure']['at'])
+                except (IndexError, KeyError, ValueError, TypeError):
+                    logging.warning(f"Failed to extract departure from: {itinerary}")
+                    return pd.NaT
 
-        df['departure'] = df['itineraries'].apply(extract_departure)
-        
-        # Remove rows with NaN prices
-        df = df.dropna(subset=['price'])
-        
-        return df
-    return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
+            df['departure'] = df['itineraries'].apply(extract_departure)
+            
+            # Remove rows with NaN prices or departures
+            df = df.dropna(subset=['price', 'departure'])
+            
+            logging.info(f"Loaded {len(df)} rows from {filepath}")
+            return df
+        except Exception as e:
+            logging.exception(f"Error loading data from {filepath}: {str(e)}")
+            return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
+    else:
+        logging.warning(f"File not found: {filepath}")
+        return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
 
 def get_flight_offers(origin, destination, departure_date):
     try:
@@ -69,7 +97,7 @@ def get_flight_offers(origin, destination, departure_date):
         )
         return response.data
     except ResponseError as error:
-        st.warning(f"An error occurred while fetching data: {error}")
+        logging.warning(f"An error occurred while fetching data: {error}")
         return []
 
 def extract_price(offers):
@@ -84,7 +112,7 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
     
     for departure_date in date_range:
         if api_call_count >= 2:
-            st.warning("API call limit reached. Using existing data for remaining predictions.")
+            logging.info("API call limit reached. Using existing data for remaining predictions.")
             break
         
         # Check if we already have data for this date
@@ -132,8 +160,8 @@ def train_model(df):
     train_mae = mean_absolute_error(y_train, train_predictions)
     test_mae = mean_absolute_error(y_test, test_predictions)
     
-    st.write(f"Train MAE: ${train_mae:.2f}")
-    st.write(f"Test MAE: ${test_mae:.2f}")
+    logging.info(f"Train MAE: ${train_mae:.2f}")
+    logging.info(f"Test MAE: ${test_mae:.2f}")
     
     return model
 
@@ -224,6 +252,7 @@ def main():
         except Exception as e:
             logging.exception("An error occurred:")
             st.error(f"An error occurred: {str(e)}")
+            st.error("Please check the logs for more details.")
 
 if __name__ == "__main__":
     main()
