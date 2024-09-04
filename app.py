@@ -13,7 +13,7 @@ from amadeus import Client, ResponseError
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS
+# Custom CSS (unchanged)
 st.markdown("""
 <style>
     .reportview-container {
@@ -54,53 +54,20 @@ amadeus = Client(
 def format_price(price):
     return f"${price:,.2f}"
 
-def load_and_preprocess_data(filepath, origin, destination):
-    st.write(f"Debug: Loading data from {filepath} for route {origin}-{destination}")
+def load_and_preprocess_data(filepath, route):
     if not os.path.exists(filepath):
-        st.error(f"File not found: {filepath}")
         return pd.DataFrame()
 
     try:
         df = pd.read_csv(filepath)
-        st.write("Debug: CSV file loaded successfully")
-        st.write("Debug: CSV columns:", df.columns.tolist())
-        st.write("Debug: First few rows of CSV:")
-        st.write(df.head())
-
-        if 'itineraries' not in df.columns:
-            st.error("'itineraries' column not found in CSV")
-            return pd.DataFrame()
-
-        def extract_route(itinerary_data):
-            try:
-                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
-                first_segment = itinerary_dict[0]['segments'][0]
-                return f"{first_segment['departure']['iataCode']}-{first_segment['arrival']['iataCode']}"
-            except Exception as e:
-                st.write(f"Debug: Error extracting route: {e}")
-                return None
-
-        df['route'] = df['itineraries'].apply(extract_route)
-        st.write(f"Debug: Routes extracted. Unique routes: {df['route'].unique().tolist()}")
-        
-        st.write(f"Debug: Filtering for route: {origin}-{destination}")
-        st.write(f"Debug: Rows before filtering: {len(df)}")
-        df = df[df['route'] == f"{origin}-{destination}"]
-        st.write(f"Debug: Rows after filtering: {len(df)}")
-
-        if 'DepartureDate' in df.columns and 'Price' in df.columns:
-            df['departure'] = pd.to_datetime(df['DepartureDate'])
-            df['price'] = pd.to_numeric(df['Price'], errors='coerce')
-        else:
-            st.error("Required columns 'DepartureDate' or 'Price' not found in CSV")
-            return pd.DataFrame()
-
+        df = df[df['route'] == route]
+        df['departure'] = pd.to_datetime(df['departure'])
+        df['price'] = pd.to_numeric(df['price'], errors='coerce')
         df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
-        st.write(f"Debug: Final dataframe shape: {df.shape}")
         return df[['departure', 'price']]
     except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
+        st.error(f"Error loading data for route {route}: {str(e)}")
         return pd.DataFrame()
 
 def should_call_api(route):
@@ -129,23 +96,19 @@ def get_flight_offers(origin, destination, departure_date):
         st.error(f"Error fetching data from Amadeus API: {error}")
         return []
 
-def process_and_combine_data(api_data, existing_data, origin, destination):
+def process_and_combine_data(api_data, existing_data, route):
     new_data = []
     for offer in api_data:
         price = float(offer['price']['total'])
         departure = offer['itineraries'][0]['segments'][0]['departure']['at']
-        new_data.append({
-            'DepartureDate': departure,
-            'Price': price,
-            'itineraries': json.dumps(offer['itineraries'])
-        })
+        new_data.append({'departure': departure, 'price': price, 'route': route})
     
     new_df = pd.DataFrame(new_data)
-    new_df['DepartureDate'] = pd.to_datetime(new_df['DepartureDate'])
+    new_df['departure'] = pd.to_datetime(new_df['departure'])
     
     combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-    combined_df = combined_df.drop_duplicates(subset=['DepartureDate'], keep='last')
-    combined_df = combined_df.sort_values('DepartureDate')
+    combined_df = combined_df.drop_duplicates(subset=['departure', 'route'], keep='last')
+    combined_df = combined_df.sort_values('departure')
     
     return combined_df
 
@@ -217,7 +180,7 @@ def main():
     
     if st.button("🔍 Predict Prices"):
         with st.spinner("Loading data and making predictions..."):
-            existing_data = load_and_preprocess_data("flight_prices.csv", origin, destination)
+            existing_data = load_and_preprocess_data("flight_prices.csv", route)
             
             if existing_data.empty:
                 st.warning(f"⚠️ No existing data found for route {route}. Attempting to fetch data from API.")
@@ -228,7 +191,7 @@ def main():
                 api_data = get_flight_offers(origin, destination, target_date)
                 if api_data:
                     st.success(f"✅ Successfully fetched new data from Amadeus API for route {route}")
-                    combined_data = process_and_combine_data(api_data, existing_data, origin, destination)
+                    combined_data = process_and_combine_data(api_data, existing_data, route)
                     combined_data.to_csv("flight_prices.csv", mode='a', header=not os.path.exists("flight_prices.csv"), index=False)
                     st.success("💾 Updated data saved to flight_prices.csv")
                     update_api_call_time(route)
