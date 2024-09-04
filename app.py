@@ -4,7 +4,6 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
-import plotly.express as px
 from datetime import datetime, timedelta
 import json
 import os
@@ -54,13 +53,8 @@ amadeus = Client(
 # ... (keep the existing functions: load_and_preprocess_data, get_flight_offers, process_and_combine_data, engineer_features, train_model, predict_prices)
 
 def plot_prices(df, title):
-    fig = px.line(df, x='departure', y='predicted_price', title=title)
-    fig.update_layout(
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font_color='white'
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    st.line_chart(df.set_index('departure')['predicted_price'], use_container_width=True)
+    st.write(title)
 
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
