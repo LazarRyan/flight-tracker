@@ -51,6 +51,9 @@ amadeus = Client(
     client_secret=AMADEUS_CLIENT_SECRET
 )
 
+def format_price(price):
+    return f"${price:,.2f}"
+
 def load_and_preprocess_data(filepath):
     if not os.path.exists(filepath):
         st.error(f"File not found: {filepath}")
@@ -88,6 +91,7 @@ def load_and_preprocess_data(filepath):
         df['departure'] = pd.to_datetime(df['departure'])
         df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
+        df['price'] = df['price'].apply(format_price)
         
         return df[['departure', 'price']]
     except Exception as e:
@@ -125,7 +129,7 @@ def process_and_combine_data(api_data, existing_data):
     for offer in api_data:
         price = float(offer['price']['total'])
         departure = offer['itineraries'][0]['segments'][0]['departure']['at']
-        new_data.append({'departure': departure, 'price': price})
+        new_data.append({'departure': departure, 'price': format_price(price)})
     
     new_df = pd.DataFrame(new_data)
     new_df['departure'] = pd.to_datetime(new_df['departure'])
@@ -137,6 +141,7 @@ def process_and_combine_data(api_data, existing_data):
     return combined_df
 
 def engineer_features(df):
+    df['price'] = df['price'].str.replace('$', '').str.replace(',', '').astype(float)
     df['day_of_week'] = df['departure'].dt.dayofweek
     df['month'] = df['departure'].dt.month
     df['days_to_flight'] = (df['departure'] - datetime.now()).dt.days
@@ -166,37 +171,37 @@ def predict_prices(model, start_date, end_date):
     future_df = engineer_features(future_df)
     
     X_future = future_df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
-    future_df['predicted_price'] = model.predict(X_future)
+    future_df['predicted price'] = model.predict(X_future)
+    future_df['predicted price'] = future_df['predicted price'].apply(format_price)
     
     return future_df
 
 def plot_prices(df, title):
-    plt.figure(figsize=(12, 6))
-    plt.plot(df['departure'], df['predicted_price'], marker='o', color='#4F8BF9')
-    plt.title(title, color='white', fontsize=16)
-    plt.xlabel('Departure Date', color='white')
-    plt.ylabel('Predicted Price (USD)', color='white')
-    plt.grid(True, color='gray', linestyle='--', alpha=0.7)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    df['numeric_price'] = df['predicted price'].str.replace('$', '').str.replace(',', '').astype(float)
+    ax.plot(df['departure'], df['numeric_price'], marker='o', color='#4F8BF9')
+    ax.set_title(title, color='black', fontsize=16)
+    ax.set_xlabel('Departure Date', color='black')
+    ax.set_ylabel('Predicted Price (USD)', color='black')
+    ax.grid(True, color='gray', linestyle='--', alpha=0.7)
     
     # Format y-axis ticks to show dollar amounts
-    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.2f}'))
     
     # Ensure y-axis starts at 0
-    plt.ylim(bottom=0)
+    ax.set_ylim(bottom=0)
     
     # Adjust tick colors
-    plt.tick_params(colors='white', which='both')
+    ax.tick_params(colors='black', which='both')
     
     # Rotate x-axis labels for better readability
-    plt.gcf().autofmt_xdate()
+    fig.autofmt_xdate()
     
-    plt.gca().set_facecolor('none')
-    plt.gcf().set_facecolor('none')
-    
-    # Add padding to the plot
+    # Adjust layout to prevent cutting off labels
     plt.tight_layout()
     
-    st.pyplot(plt)
+    # Use Streamlit's native plotting function
+    st.pyplot(fig)
 
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
@@ -244,18 +249,21 @@ def main():
                 df = engineer_features(combined_data)
                 model, train_mae, test_mae = train_model(df)
                 
-                st.info(f"🤖 Model trained. Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
+                st.info(f"🤖 Model trained. Train MAE: {format_price(train_mae)}, Test MAE: {format_price(test_mae)}")
                 
                 start_date = datetime.now().date()
                 end_date = target_date + timedelta(days=30)
                 future_prices = predict_prices(model, start_date, end_date)
                 
                 st.subheader("📈 Predicted Prices")
-                plot_prices(future_prices, "Predicted Flight Prices")
+                with st.container():
+                    col1, col2, col3 = st.columns([1,3,1])
+                    with col2:
+                        plot_prices(future_prices, "Predicted Flight Prices")
                 
-                best_days = future_prices.nsmallest(5, 'predicted_price')
+                best_days = future_prices.nsmallest(5, 'predicted price')
                 st.subheader("💰 Best Days to Buy Tickets")
-                st.table(best_days[['departure', 'predicted_price']].set_index('departure'))
+                st.table(best_days[['departure', 'predicted price']].set_index('departure'))
                 
                 days_left = (target_date - datetime.now().date()).days
                 st.metric(label=f"⏳ Days until {target_date}", value=days_left)
