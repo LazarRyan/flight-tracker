@@ -177,9 +177,25 @@ def plot_prices(df, title):
     plt.xlabel('Departure Date', color='white')
     plt.ylabel('Predicted Price (USD)', color='white')
     plt.grid(True, color='gray', linestyle='--', alpha=0.7)
-    plt.tick_params(colors='white')
+    
+    # Format y-axis ticks to show dollar amounts
+    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+    
+    # Ensure y-axis starts at 0
+    plt.ylim(bottom=0)
+    
+    # Adjust tick colors
+    plt.tick_params(colors='white', which='both')
+    
+    # Rotate x-axis labels for better readability
+    plt.gcf().autofmt_xdate()
+    
     plt.gca().set_facecolor('none')
     plt.gcf().set_facecolor('none')
+    
+    # Add padding to the plot
+    plt.tight_layout()
+    
     st.pyplot(plt)
 
 def main():
