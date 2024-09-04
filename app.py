@@ -2,12 +2,14 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import os
 from amadeus import Client, ResponseError
 
-# Amadeus API configuration (you'll need to set these up in your Streamlit secrets)
+# Amadeus API configuration
 AMADEUS_CLIENT_ID = st.secrets["AMADEUS_CLIENT_ID"]
 AMADEUS_CLIENT_SECRET = st.secrets["AMADEUS_CLIENT_SECRET"]
 
@@ -58,7 +60,7 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
         
         if price is None:
             api_error_count += 1
-            if api_error_count > 2:  # If more than 2 consecutive errors, use existing data
+            if api_error_count > 5:  # If more than 5 consecutive errors, use existing data
                 st.warning("Too many API errors. Using existing data for predictions.")
                 return existing_data
             
@@ -90,19 +92,35 @@ def preprocess_data(df):
     df['DayOfWeek'] = df['DepartureDate'].dt.dayofweek
     df['Month'] = df['DepartureDate'].dt.month
     df['DaysToFlight'] = (df['DepartureDate'] - df['Date']).dt.days
+    df['IsWeekend'] = df['DayOfWeek'].isin([5, 6]).astype(int)
+    df['IsHoliday'] = ((df['Month'] == 12) & (df['DayOfWeek'] >= 20)).astype(int)  # Simplified holiday detection
     return df
 
 # Function to train model
 def train_model(df):
-    X = df[['DayOfWeek', 'Month', 'DaysToFlight']]
+    X = df[['DayOfWeek', 'Month', 'DaysToFlight', 'IsWeekend', 'IsHoliday']]
     y = df['Price']
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
     model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X, y)
+    model.fit(X_train, y_train)
+    
+    # Evaluate model
+    train_predictions = model.predict(X_train)
+    test_predictions = model.predict(X_test)
+    
+    train_mae = mean_absolute_error(y_train, train_predictions)
+    test_mae = mean_absolute_error(y_test, test_predictions)
+    
+    st.write(f"Train MAE: ${train_mae:.2f}")
+    st.write(f"Test MAE: ${test_mae:.2f}")
+    
     return model
 
 # Function to predict future prices
 def predict_future_prices(model, future_df):
-    X_future = future_df[['DayOfWeek', 'Month', 'DaysToFlight']]
+    X_future = future_df[['DayOfWeek', 'Month', 'DaysToFlight', 'IsWeekend', 'IsHoliday']]
     future_df['PredictedPrice'] = model.predict(X_future)
     return future_df
 
@@ -143,11 +161,14 @@ def main():
     
     display_countdown(target_date)
     
-    historical_data_path = f"historical_flight_data_{origin}_{destination}.csv"
+    historical_data_path = "flight_prices.csv"
     
     if st.button("Update Data and Predict"):
         # Load existing data
         existing_data = load_data(historical_data_path)
+        
+        if existing_data.empty:
+            st.warning(f"No existing data found in {historical_data_path}. Will attempt to collect new data.")
         
         # Check if we need to update the data
         last_update = existing_data['Date'].max() if not existing_data.empty else datetime.min.date()
@@ -161,12 +182,12 @@ def main():
                 updated_data = pd.concat([existing_data, new_data], ignore_index=True)
                 updated_data = updated_data.drop_duplicates(subset=['Date', 'DepartureDate', 'Origin', 'Destination'], keep='last')
                 updated_data.to_csv(historical_data_path, index=False)
-                st.success("Historical data updated and saved.")
+                st.success(f"Historical data updated and saved to {historical_data_path}.")
             else:
                 st.info("No new data collected or API errors occurred. Using existing data.")
                 updated_data = existing_data
         else:
-            st.info("Using existing historical data (last updated less than 30 days ago).")
+            st.info(f"Using existing historical data from {historical_data_path} (last updated less than 30 days ago).")
             updated_data = existing_data
         
         if not updated_data.empty:
@@ -193,7 +214,7 @@ def main():
             st.subheader("All Predicted Prices")
             st.dataframe(future_df[['DepartureDate', 'PredictedPrice']].set_index('DepartureDate'))
         else:
-            st.error("No data available for predictions. Please try again later.")
+            st.error("No data available for predictions. Please try again later or check your internet connection.")
 
 if __name__ == "__main__":
     main()
