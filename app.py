@@ -1,150 +1,60 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import json
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
+import joblib
 import os
-import json
-from amadeus import Client, ResponseError
-import logging
 
-# Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Set page config
+st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Amadeus API configuration
-AMADEUS_CLIENT_ID = st.secrets["AMADEUS_CLIENT_ID"]
-AMADEUS_CLIENT_SECRET = st.secrets["AMADEUS_CLIENT_SECRET"]
+# Function to load and preprocess data
+def load_and_preprocess_data(filepath):
+    if not os.path.exists(filepath):
+        st.error(f"File not found: {filepath}")
+        return None
 
-amadeus = Client(
-    client_id=AMADEUS_CLIENT_ID,
-    client_secret=AMADEUS_CLIENT_SECRET
-)
-
-def safe_json_loads(x):
-    if isinstance(x, str):
+    df = pd.read_csv(filepath)
+    
+    def extract_price(price_data):
         try:
-            return json.loads(x)
-        except json.JSONDecodeError:
-            logging.warning(f"Failed to parse JSON: {x}")
-            return None
-    return x
-
-def safe_eval(x):
-    if isinstance(x, str):
-        try:
-            return eval(x)
+            price_dict = json.loads(price_data.replace("'", "\""))
+            return float(price_dict['price']['total'])
         except:
-            logging.warning(f"Failed to eval: {x}")
-            return None
-    return x
-
-def load_data(filepath):
-    if os.path.exists(filepath):
+            return np.nan
+    
+    def extract_departure(itinerary_data):
         try:
-            # Read CSV with header, skipping bad lines
-            df = pd.read_csv(filepath, parse_dates=['date'], 
-                             dtype={'price': float, 'itineraries': str, 'carriers': str, 'price_details': str},
-                             skipinitialspace=True, skip_blank_lines=True, error_bad_lines=False)
-            
-            if df.empty:
-                logging.warning(f"The file {filepath} exists but is empty.")
-                return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
-            
-            # Remove header row if it's still in the data
-            df = df[df['date'] != 'DepartureDate']
-            
-            # Convert price to float, replacing any non-numeric values with NaN
-            df['price'] = pd.to_numeric(df['price'], errors='coerce')
-            
-            df['itineraries'] = df['itineraries'].apply(safe_json_loads)
-            df['carriers'] = df['carriers'].apply(safe_eval)
-            df['price_details'] = df['price_details'].apply(safe_json_loads)
-            
-            def extract_departure(itinerary):
-                if not isinstance(itinerary, list) or not itinerary:
-                    return pd.NaT
-                try:
-                    return pd.to_datetime(itinerary[0]['segments'][0]['departure']['at'])
-                except (IndexError, KeyError, ValueError, TypeError):
-                    logging.warning(f"Failed to extract departure from: {itinerary}")
-                    return pd.NaT
-
-            df['departure'] = df['itineraries'].apply(extract_departure)
-            df = df.dropna(subset=['price', 'departure'])
-            
-            if df.empty:
-                logging.warning(f"After processing, no valid data remains in {filepath}.")
-            else:
-                logging.info(f"Loaded {len(df)} rows from {filepath}")
-            return df
-        except Exception as e:
-            logging.exception(f"Error loading data from {filepath}: {str(e)}")
-            return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
-    else:
-        logging.warning(f"File not found: {filepath}")
-        return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
-
-def get_flight_offers(origin, destination, departure_date):
-    try:
-        response = amadeus.shopping.flight_offers_search.get(
-            originLocationCode=origin,
-            destinationLocationCode=destination,
-            departureDate=departure_date.strftime("%Y-%m-%d"),
-            adults=1
-        )
-        return response.data
-    except ResponseError as error:
-        logging.warning(f"An error occurred while fetching data: {error}")
-        return []
-
-def extract_price(offers):
-    if offers:
-        return min(float(offer['price']['total']) for offer in offers)
-    return None
-
-def collect_new_data(origin, destination, start_date, end_date, existing_data):
-    date_range = pd.date_range(start=start_date, end=end_date)
-    new_data = []
-    api_call_count = 0
+            itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
+            return itinerary_dict[0]['segments'][0]['departure']['at']
+        except:
+            return np.nan
     
-    for departure_date in date_range:
-        if api_call_count >= 2:
-            logging.info("API call limit reached. Using existing data for remaining predictions.")
-            break
-        
-        if not existing_data.empty and departure_date.date() in existing_data['date'].dt.date.values:
-            continue
-        
-        offers = get_flight_offers(origin, destination, departure_date)
-        api_call_count += 1
-        
-        if offers:
-            price = extract_price(offers)
-            new_data.append({
-                'date': departure_date.date(),
-                'price': price,
-                'itineraries': json.dumps(offers[0]['itineraries']),
-                'carriers': str(offers[0]['validatingAirlineCodes']),
-                'price_details': json.dumps(offers[0]['travelerPricings']),
-                'departure': datetime.fromisoformat(offers[0]['itineraries'][0]['segments'][0]['departure']['at'])
-            })
+    df['price'] = df['price_details'].apply(extract_price)
+    df['departure'] = df['itineraries'].apply(extract_departure)
+    df['departure'] = pd.to_datetime(df['departure'])
     
-    new_df = pd.DataFrame(new_data)
-    return pd.concat([existing_data, new_df], ignore_index=True).sort_values('date')
+    df = df.dropna(subset=['price', 'departure'])
+    df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
+    
+    return df[['departure', 'price']]
 
-def preprocess_data(df):
-    df['DayOfWeek'] = df['departure'].dt.dayofweek
-    df['Month'] = df['departure'].dt.month
-    df['DaysToFlight'] = (df['departure'] - datetime.now()).dt.days
-    df['IsWeekend'] = df['DayOfWeek'].isin([5, 6]).astype(int)
-    df['IsHoliday'] = ((df['Month'] == 12) & (df['departure'].dt.day >= 20)).astype(int)
+# Function to engineer features
+def engineer_features(df):
+    df['day_of_week'] = df['departure'].dt.dayofweek
+    df['month'] = df['departure'].dt.month
+    df['days_to_flight'] = (df['departure'] - datetime.now()).dt.days
+    df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
     return df
 
+# Function to train model
 def train_model(df):
-    X = df[['DayOfWeek', 'Month', 'DaysToFlight', 'IsWeekend', 'IsHoliday']]
+    X = df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
     y = df['price']
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -152,102 +62,79 @@ def train_model(df):
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     
-    train_predictions = model.predict(X_train)
-    test_predictions = model.predict(X_test)
+    train_pred = model.predict(X_train)
+    test_pred = model.predict(X_test)
     
-    train_mae = mean_absolute_error(y_train, train_predictions)
-    test_mae = mean_absolute_error(y_test, test_predictions)
+    train_mae = mean_absolute_error(y_train, train_pred)
+    test_mae = mean_absolute_error(y_test, test_pred)
     
-    logging.info(f"Train MAE: ${train_mae:.2f}")
-    logging.info(f"Test MAE: ${test_mae:.2f}")
-    
-    return model
+    return model, train_mae, test_mae
 
-def predict_future_prices(model, future_df):
-    X_future = future_df[['DayOfWeek', 'Month', 'DaysToFlight', 'IsWeekend', 'IsHoliday']]
-    future_df['PredictedPrice'] = model.predict(X_future)
+# Function to predict prices
+def predict_prices(model, start_date, end_date):
+    date_range = pd.date_range(start=start_date, end=end_date)
+    future_df = pd.DataFrame({'departure': date_range})
+    future_df = engineer_features(future_df)
+    
+    X_future = future_df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
+    future_df['predicted_price'] = model.predict(X_future)
+    
     return future_df
 
-def find_best_days_to_buy(future_df, n=5):
-    return future_df.nsmallest(n, 'PredictedPrice')
-
-def plot_price_predictions(future_df, best_days):
+# Function to plot prices
+def plot_prices(df, title):
     plt.figure(figsize=(12, 6))
-    plt.plot(future_df['departure'], future_df['PredictedPrice'], marker='', linewidth=2)
-    plt.scatter(best_days['departure'], best_days['PredictedPrice'], color='red', s=50, zorder=5)
-    plt.title('Predicted Flight Prices and Best Days to Buy')
+    plt.plot(df['departure'], df['predicted_price'], marker='o')
+    plt.title(title)
     plt.xlabel('Departure Date')
     plt.ylabel('Predicted Price (USD)')
-    plt.grid(True, linestyle='--', alpha=0.7)
-    for _, row in best_days.iterrows():
-        plt.annotate(f"${row['PredictedPrice']:.2f}\n{row['departure'].strftime('%Y-%m-%d')}", 
-                     (row['departure'], row['PredictedPrice']),
-                     textcoords="offset points", xytext=(0,10), ha='center')
+    plt.grid(True)
     st.pyplot(plt)
 
-def display_countdown(target_date):
-    today = datetime.now().date()
-    days_left = (target_date - today).days
-    st.metric(label=f"Days until {target_date.strftime('%B %d, %Y')}", value=days_left)
-
+# Main Streamlit app
 def main():
     st.title("Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
 
-    origin = st.text_input("Origin Airport Code", "JFK")
-    destination = st.text_input("Destination Airport Code", "FCO")  # Rome, Italy
-    target_date = st.date_input("Target Flight Date", value=datetime(2025, 9, 10).date())
+    # Sidebar for user inputs
+    st.sidebar.header("User Input")
+    data_file = st.sidebar.file_uploader("Upload your flight data CSV", type="csv")
+    target_date = st.sidebar.date_input("Target Flight Date", value=datetime(2025, 9, 10))
     
-    display_countdown(target_date)
-    
-    historical_data_path = "flight_prices.csv"
-    
-    if st.button("Update Data and Predict"):
-        try:
-            existing_data = load_data(historical_data_path)
+    if data_file is not None:
+        df = load_and_preprocess_data(data_file)
+        
+        if df is not None and not df.empty:
+            st.write("Data loaded successfully!")
+            st.write(f"Number of records: {len(df)}")
+            st.write("Sample data:")
+            st.write(df.head())
             
-            if existing_data.empty:
-                st.warning(f"No valid existing data found in {historical_data_path}. Will attempt to collect new data.")
-                if os.path.exists(historical_data_path):
-                    st.info(f"The file {historical_data_path} exists but contains no valid data.")
-                else:
-                    st.info(f"The file {historical_data_path} does not exist. It will be created when new data is collected.")
+            df = engineer_features(df)
+            model, train_mae, test_mae = train_model(df)
             
-            st.write("Collecting new data...")
-            updated_data = collect_new_data(origin, destination, datetime.now().date(), target_date, existing_data)
+            st.write(f"Model trained. Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
             
-            if len(updated_data) > len(existing_data):
-                updated_data.to_csv(historical_data_path, index=False)
-                st.success(f"New data added and saved to {historical_data_path}.")
-            else:
-                st.info("No new data added. Using existing historical data.")
+            # Predict prices for the next year
+            start_date = datetime.now().date()
+            end_date = target_date + timedelta(days=30)  # Predict up to a month after the target date
+            future_prices = predict_prices(model, start_date, end_date)
             
-            if not updated_data.empty and not updated_data['price'].isnull().all():
-                st.write("Training model...")
-                df = preprocess_data(updated_data)
-                model = train_model(df)
-                
-                st.write("Predicting future prices...")
-                future_dates = pd.date_range(start=datetime.now(), end=target_date)
-                future_df = pd.DataFrame({'departure': future_dates})
-                future_df = preprocess_data(future_df)
-                future_df = predict_future_prices(model, future_df)
-                best_days = find_best_days_to_buy(future_df)
-                
-                st.subheader("Price Prediction Chart")
-                plot_price_predictions(future_df, best_days)
-                
-                st.subheader("Best Days to Buy Tickets")
-                st.dataframe(best_days[['departure', 'PredictedPrice']].set_index('departure'))
-                
-                st.subheader("All Predicted Prices")
-                st.dataframe(future_df[['departure', 'PredictedPrice']].set_index('departure'))
-            else:
-                st.error("No valid price data available for predictions. Please check your data source.")
-        except Exception as e:
-            logging.exception("An error occurred:")
-            st.error(f"An error occurred: {str(e)}")
-            st.error("Please check the logs for more details.")
+            st.subheader("Predicted Prices")
+            plot_prices(future_prices, "Predicted Flight Prices")
+            
+            # Find best days to buy
+            best_days = future_prices.nsmallest(5, 'predicted_price')
+            st.subheader("Best Days to Buy Tickets")
+            st.write(best_days[['departure', 'predicted_price']])
+            
+            # Countdown to target date
+            days_left = (target_date - datetime.now().date()).days
+            st.metric(label=f"Days until {target_date}", value=days_left)
+        else:
+            st.error("Failed to load or process the data. Please check your CSV file.")
+    else:
+        st.info("Please upload a CSV file to get started.")
 
 if __name__ == "__main__":
     main()
