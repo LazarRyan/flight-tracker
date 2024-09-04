@@ -203,7 +203,7 @@ def main():
     
     display_countdown(target_date)
     
-    historical_data_path = "flight_prices.csv"
+    historical_data_path = "historical_prices.csv"
     
     if st.button("Update Data and Predict"):
         try:
