@@ -55,33 +55,23 @@ def format_price(price):
     return f"${price:,.2f}"
 
 def load_and_preprocess_data(master_filepath, route_filepath, origin, destination):
-    master_df = pd.DataFrame(columns=['departure', 'price', 'origin', 'destination'])
-    route_df = pd.DataFrame(columns=['departure', 'price', 'origin', 'destination'])
-
-    if os.path.exists(master_filepath):
-        master_df = pd.read_csv(master_filepath, parse_dates=['departure'])
-        st.success(f"✅ Loaded master file: {master_filepath}")
-    else:
-        st.warning(f"Master file not found: {master_filepath}. Starting with an empty master dataset.")
-
-    # Filter the master DataFrame for the specific route
+    # Load master file
+    master_df = pd.read_csv(master_filepath, parse_dates=['departure'])
+    
+    # Filter for specific route
     route_df = master_df[(master_df['origin'] == origin) & (master_df['destination'] == destination)]
-
-    if os.path.exists(route_filepath):
-        route_df = pd.read_csv(route_filepath, parse_dates=['departure'])
-        st.success(f"✅ Loaded route-specific file: {route_filepath}")
-    elif not route_df.empty:
+    
+    # If route-specific file doesn't exist, create it
+    if not os.path.exists(route_filepath):
         route_df.to_csv(route_filepath, index=False)
         st.info(f"Created new route-specific file: {route_filepath}")
     else:
-        st.info(f"No existing data for route {origin} to {destination}. Will attempt to fetch from API.")
-
-    # Ensure data types and remove invalid entries
-    for df in [master_df, route_df]:
-        df['price'] = pd.to_numeric(df['price'], errors='coerce')
-        df = df.dropna(subset=['price', 'departure'])
-        df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
-
+        # If it exists, load it and update with any new data from master
+        existing_route_df = pd.read_csv(route_filepath, parse_dates=['departure'])
+        route_df = pd.concat([existing_route_df, route_df]).drop_duplicates(subset=['departure'], keep='last')
+        route_df.to_csv(route_filepath, index=False)
+        st.success(f"Updated route-specific file: {route_filepath}")
+    
     return master_df, route_df
 
 def should_call_api(origin, destination):
@@ -130,9 +120,6 @@ def get_flight_offers(origin, destination, departure_date):
         return response.data
     except ResponseError as error:
         st.error(f"Error fetching data from Amadeus API: {error}")
-        return []
-    except Exception as e:
-        st.error(f"Unexpected error when calling Amadeus API: {str(e)}")
         return []
 
 def process_and_combine_data(api_data, master_df, route_df, origin, destination):
