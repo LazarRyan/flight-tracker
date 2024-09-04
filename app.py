@@ -21,12 +21,16 @@ amadeus = Client(
 
 # Function to load and preprocess data
 def load_and_preprocess_data(filepath):
-    if not os.path.exists(filepath):
-        st.error(f"File not found: {filepath}")
-        return pd.DataFrame()
+    if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
+        st.warning(f"File not found or empty: {filepath}")
+        return pd.DataFrame(columns=['departure', 'price'])
 
-    df = pd.read_csv(filepath)
-    
+    try:
+        df = pd.read_csv(filepath)
+    except pd.errors.EmptyDataError:
+        st.warning(f"The file {filepath} is empty.")
+        return pd.DataFrame(columns=['departure', 'price'])
+
     def extract_price(price_data):
         try:
             price_dict = json.loads(price_data.replace("'", "\""))
@@ -41,8 +45,11 @@ def load_and_preprocess_data(filepath):
         except:
             return np.nan
     
-    df['price'] = df['price_details'].apply(extract_price)
-    df['departure'] = df['itineraries'].apply(extract_departure)
+    if 'price_details' in df.columns:
+        df['price'] = df['price_details'].apply(extract_price)
+    if 'itineraries' in df.columns:
+        df['departure'] = df['itineraries'].apply(extract_departure)
+    
     df['departure'] = pd.to_datetime(df['departure'])
     
     df = df.dropna(subset=['price', 'departure'])
@@ -91,6 +98,10 @@ def engineer_features(df):
 
 # Function to train model
 def train_model(df):
+    if len(df) < 2:
+        st.error("Not enough data to train the model.")
+        return None, None, None
+
     X = df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
     y = df['price']
     
@@ -162,26 +173,29 @@ def main():
         df = engineer_features(combined_data)
         model, train_mae, test_mae = train_model(df)
         
-        st.write(f"Model trained. Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
-        
-        # Predict prices for the next year
-        start_date = datetime.now().date()
-        end_date = target_date + timedelta(days=30)  # Predict up to a month after the target date
-        future_prices = predict_prices(model, start_date, end_date)
-        
-        st.subheader("Predicted Prices")
-        plot_prices(future_prices, "Predicted Flight Prices")
-        
-        # Find best days to buy
-        best_days = future_prices.nsmallest(5, 'predicted_price')
-        st.subheader("Best Days to Buy Tickets")
-        st.write(best_days[['departure', 'predicted_price']])
-        
-        # Countdown to target date
-        days_left = (target_date - datetime.now().date()).days
-        st.metric(label=f"Days until {target_date}", value=days_left)
+        if model is not None:
+            st.write(f"Model trained. Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
+            
+            # Predict prices for the next year
+            start_date = datetime.now().date()
+            end_date = target_date + timedelta(days=30)  # Predict up to a month after the target date
+            future_prices = predict_prices(model, start_date, end_date)
+            
+            st.subheader("Predicted Prices")
+            plot_prices(future_prices, "Predicted Flight Prices")
+            
+            # Find best days to buy
+            best_days = future_prices.nsmallest(5, 'predicted_price')
+            st.subheader("Best Days to Buy Tickets")
+            st.write(best_days[['departure', 'predicted_price']])
+            
+            # Countdown to target date
+            days_left = (target_date - datetime.now().date()).days
+            st.metric(label=f"Days until {target_date}", value=days_left)
+        else:
+            st.error("Unable to train model due to insufficient data.")
     else:
-        st.error("No data available for prediction. Please check your data source.")
+        st.error("No data available for prediction. Please try fetching data from the API.")
 
 if __name__ == "__main__":
     main()
