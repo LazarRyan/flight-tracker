@@ -13,7 +13,7 @@ from amadeus import Client, ResponseError
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS
+# Custom CSS (unchanged)
 st.markdown("""
 <style>
     .reportview-container {
@@ -54,7 +54,7 @@ amadeus = Client(
 def format_price(price):
     return f"${price:,.2f}"
 
-def load_and_preprocess_data(filepath, origin, destination):
+def load_and_preprocess_data(filepath):
     if not os.path.exists(filepath):
         st.error(f"File not found: {filepath}")
         return pd.DataFrame()
@@ -92,48 +92,23 @@ def load_and_preprocess_data(filepath, origin, destination):
         df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
         
-        # Filter for the specific route
-        route_df = df[(df['origin'] == origin) & (df['destination'] == destination)]
-        
-        return route_df[['departure', 'price', 'origin', 'destination']]
+        return df
     except Exception as e:
         st.error(f"Error loading data from {filepath}: {str(e)}")
         return pd.DataFrame()
 
-def should_call_api(origin, destination):
-    cache_file = "api_calls.json"
-    today = datetime.now().date().isoformat()
-    
+def should_call_api():
+    cache_file = "last_api_call.txt"
     if os.path.exists(cache_file):
         with open(cache_file, "r") as f:
-            api_calls = json.load(f)
-    else:
-        api_calls = {}
-    
-    route_key = f"{origin}-{destination}"
-    
-    if today in api_calls and route_key in api_calls[today]:
-        return False
+            last_call = datetime.fromisoformat(f.read().strip())
+        if datetime.now() - last_call < timedelta(days=1):
+            return False
     return True
 
-def update_api_call_time(origin, destination):
-    cache_file = "api_calls.json"
-    today = datetime.now().date().isoformat()
-    
-    if os.path.exists(cache_file):
-        with open(cache_file, "r") as f:
-            api_calls = json.load(f)
-    else:
-        api_calls = {}
-    
-    if today not in api_calls:
-        api_calls[today] = {}
-    
-    route_key = f"{origin}-{destination}"
-    api_calls[today][route_key] = datetime.now().isoformat()
-    
-    with open(cache_file, "w") as f:
-        json.dump(api_calls, f)
+def update_api_call_time():
+    with open("last_api_call.txt", "w") as f:
+        f.write(datetime.now().isoformat())
 
 def get_flight_offers(origin, destination, departure_date):
     try:
@@ -230,40 +205,38 @@ def main():
     
     if st.button("🔍 Predict Prices"):
         with st.spinner("Loading data and making predictions..."):
-            existing_data = load_and_preprocess_data("flight_prices.csv", origin, destination)
+            all_data = load_and_preprocess_data("flight_prices.csv")
             
-            if existing_data.empty:
-                st.warning(f"⚠️ No existing data found for route {origin} to {destination}. Attempting to fetch data from API.")
+            if all_data.empty:
+                st.warning("⚠️ No existing data found. Attempting to fetch data from API.")
             else:
-                st.success(f"✅ Loaded {len(existing_data)} records for {origin} to {destination} from existing data.")
+                st.success(f"✅ Loaded {len(all_data)} records from existing data.")
             
-            if should_call_api(origin, destination):
+            # Filter data for the specific route
+            route_data = all_data[(all_data['origin'] == origin) & (all_data['destination'] == destination)]
+            
+            if should_call_api():
                 api_data = get_flight_offers(origin, destination, target_date)
                 if api_data:
                     st.success("✅ Successfully fetched new data from Amadeus API")
-                    combined_data = process_and_combine_data(api_data, existing_data, origin, destination)
-                    
-                    # Load all existing data, update with new data, and save back to CSV
-                    all_data = load_and_preprocess_data("flight_prices.csv", None, None)
-                    all_data = pd.concat([all_data, combined_data]).drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+                    all_data = process_and_combine_data(api_data, all_data, origin, destination)
                     all_data.to_csv("flight_prices.csv", index=False)
-                    
                     st.success("💾 Updated data saved to flight_prices.csv")
-                    update_api_call_time(origin, destination)
+                    update_api_call_time()
+                    # Update route_data with new data
+                    route_data = all_data[(all_data['origin'] == origin) & (all_data['destination'] == destination)]
                 else:
                     st.warning("⚠️ No new data fetched from API. Using existing data.")
-                    combined_data = existing_data
             else:
-                st.info("ℹ️ Using cached data. API call limit reached for this route today.")
-                combined_data = existing_data
+                st.info("ℹ️ Using cached data. API call limit reached for today.")
             
-            if not combined_data.empty:
-                st.write(f"📊 Total records for analysis: {len(combined_data)}")
+            if not route_data.empty:
+                st.write(f"📊 Total records for analysis: {len(route_data)}")
                 
                 with st.expander("View Sample Data"):
-                    st.dataframe(combined_data.head())
+                    st.dataframe(route_data.head())
                 
-                df = engineer_features(combined_data)
+                df = engineer_features(route_data)
                 model, train_mae, test_mae = train_model(df)
                 
                 st.info(f"🤖 Model trained. Train MAE: {format_price(train_mae)}, Test MAE: {format_price(test_mae)}")
