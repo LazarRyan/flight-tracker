@@ -54,19 +54,27 @@ amadeus = Client(
 def format_price(price):
     return f"${price:,.2f}"
 
-def load_and_preprocess_data(master_filepath, route_filepath):
+def load_and_preprocess_data(master_filepath, route_filepath, origin, destination):
     master_df = pd.DataFrame(columns=['departure', 'price', 'origin', 'destination'])
-    route_df = pd.DataFrame(columns=['departure', 'price'])
+    route_df = pd.DataFrame(columns=['departure', 'price', 'origin', 'destination'])
 
     if os.path.exists(master_filepath):
         master_df = pd.read_csv(master_filepath, parse_dates=['departure'])
+        st.success(f"✅ Loaded master file: {master_filepath}")
     else:
         st.warning(f"Master file not found: {master_filepath}. Starting with an empty master dataset.")
 
+    # Filter the master DataFrame for the specific route
+    route_df = master_df[(master_df['origin'] == origin) & (master_df['destination'] == destination)]
+
     if os.path.exists(route_filepath):
         route_df = pd.read_csv(route_filepath, parse_dates=['departure'])
+        st.success(f"✅ Loaded route-specific file: {route_filepath}")
+    elif not route_df.empty:
+        route_df.to_csv(route_filepath, index=False)
+        st.info(f"Created new route-specific file: {route_filepath}")
     else:
-        st.info(f"Route-specific file not found: {route_filepath}. Starting with an empty route dataset.")
+        st.info(f"No existing data for route {origin} to {destination}. Will attempt to fetch from API.")
 
     # Ensure data types and remove invalid entries
     for df in [master_df, route_df]:
@@ -143,8 +151,7 @@ def process_and_combine_data(api_data, master_df, route_df, origin, destination)
     master_df = master_df.sort_values('departure')
     
     # Update route-specific DataFrame
-    route_new_df = new_df[['departure', 'price']]
-    route_df = pd.concat([route_df, route_new_df], ignore_index=True)
+    route_df = pd.concat([route_df, new_df], ignore_index=True)
     route_df = route_df.drop_duplicates(subset=['departure'], keep='last')
     route_df = route_df.sort_values('departure')
     
@@ -216,14 +223,14 @@ def main():
     
     if st.button("🔍 Predict Prices"):
         with st.spinner("Loading data and making predictions..."):
-            master_csv_filename = "flight_prices_master.csv"
+            master_csv_filename = "flight_prices.csv"
             route_csv_filename = f"flight_prices_{origin}_{destination}.csv"
-            master_data, route_data = load_and_preprocess_data(master_csv_filename, route_csv_filename)
+            master_data, route_data = load_and_preprocess_data(master_csv_filename, route_csv_filename, origin, destination)
             
             if route_data.empty:
-                st.warning("⚠️ No existing data found for this route. Attempting to fetch data from API.")
+                st.warning(f"⚠️ No existing data found for route {origin} to {destination}. Attempting to fetch data from API.")
             else:
-                st.success(f"✅ Loaded {len(route_data)} records for this route from existing data.")
+                st.success(f"✅ Loaded {len(route_data)} records for {origin} to {destination} from existing data.")
             
             if should_call_api(origin, destination):
                 api_data = get_flight_offers(origin, destination, target_date)
@@ -258,7 +265,7 @@ def main():
                 with st.container():
                     col1, col2, col3 = st.columns([1,3,1])
                     with col2:
-                        plot_prices(future_prices, "Predicted Flight Prices")
+                        plot_prices(future_prices, f"Predicted Flight Prices ({origin} to {destination})")
                 
                 best_days = future_prices.nsmallest(5, 'predicted price')
                 st.subheader("💰 Best Days to Buy Tickets")
