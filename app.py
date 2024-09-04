@@ -23,14 +23,25 @@ amadeus = Client(
 def load_data(filepath):
     if os.path.exists(filepath):
         df = pd.read_csv(filepath, header=None, names=['date', 'price', 'itineraries', 'carriers', 'price_details'])
-        df['date'] = pd.to_datetime(df['date'])
+        
+        # Convert date string to datetime more explicitly
+        df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
+        
         df['price'] = df['price'].astype(float)
-        df['itineraries'] = df['itineraries'].apply(json.loads)
-        df['carriers'] = df['carriers'].apply(eval)
-        df['price_details'] = df['price_details'].apply(json.loads)
+        
+        # Safely parse JSON and list strings
+        df['itineraries'] = df['itineraries'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+        df['carriers'] = df['carriers'].apply(lambda x: eval(x) if isinstance(x, str) else x)
+        df['price_details'] = df['price_details'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
         
         # Extract departure datetime from itineraries
-        df['departure'] = df['itineraries'].apply(lambda x: datetime.fromisoformat(x[0]['segments'][0]['departure']['at']))
+        def extract_departure(itinerary):
+            try:
+                return datetime.fromisoformat(itinerary[0]['segments'][0]['departure']['at'])
+            except (IndexError, KeyError, ValueError):
+                return pd.NaT
+
+        df['departure'] = df['itineraries'].apply(extract_departure)
         
         return df
     return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
