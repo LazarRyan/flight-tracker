@@ -1,165 +1,91 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import json
 from sklearn.ensemble import RandomForestRegressor
 import joblib
 import matplotlib.pyplot as plt
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# Function to load data
-def load_data(filepath):
-    df = pd.read_csv(filepath)
-    st.write("Loaded data columns:", df.columns.tolist())  # Print the column names for debugging
-    return df
-
-# Function to extract nested dictionary values
-def extract_price(df):
-    # Check for the correct column name
-    price_column = None
-    if 'price' in df.columns:
-        price_column = 'price'
-    elif 'Price' in df.columns:
-        price_column = 'Price'
-    else:
-        st.error("The 'price' column is not found in the dataset.")
-        return df
-    
-    def extract_price_value(price_data):
-        try:
-            if isinstance(price_data, str):
-                price_dict = json.loads(price_data.replace("'", "\""))
-                return float(price_dict.get('total', np.nan))
-            else:
-                return float(price_data)
-        except (TypeError, json.JSONDecodeError, KeyError):
-            st.warning(f"Error processing price data: {price_data}")
-            return np.nan
-    
-    df['Price'] = df[price_column].apply(extract_price_value)
-    return df
-
-# Function to clean data
-def clean_data(df):
-    df = extract_price(df)
-    
-    if 'Price' not in df.columns:
-        st.error("The 'Price' column could not be created. Cleaning process stopped.")
-        return df
-    
-    # Convert DepartureDate to datetime
-    df['DepartureDate'] = pd.to_datetime(df['DepartureDate'], errors='coerce')
-    
-    # Remove outliers in Price
-    q1 = df['Price'].quantile(0.25)
-    q3 = df['Price'].quantile(0.75)
-    iqr = q3 - q1
-    lower_bound = q1 - 1.5 * iqr
-    upper_bound = q3 + 1.5 * iqr
-    df = df[(df['Price'] >= lower_bound) & (df['Price'] <= upper_bound)]
-    
-    # Fill missing values in DepartureDate using .loc
-    df.loc[:, 'DepartureDate'] = df['DepartureDate'].ffill()
-    
-    return df
+# ... (keep the existing load_data, extract_price, and clean_data functions) ...
 
 # Function to preprocess data
 def preprocess_data(df):
     df['DepartureDate'] = pd.to_datetime(df['DepartureDate'])
+    df['DaysBeforeDeparture'] = (df['DepartureDate'] - df['DepartureDate'].min()).dt.days
     df['DayOfWeek'] = df['DepartureDate'].dt.dayofweek
     df['Month'] = df['DepartureDate'].dt.month
     return df
 
 # Function to train model
 def train_model(df):
-    X = df[['DayOfWeek', 'Month']]
+    X = df[['DaysBeforeDeparture', 'DayOfWeek', 'Month']]
     y = df['Price']
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
     return model
 
 # Function to predict future prices
-def predict_future_prices(model, future_df):
+def predict_future_prices(model, target_date, days_to_predict):
+    future_dates = pd.date_range(end=target_date, periods=days_to_predict)
+    future_df = pd.DataFrame({'DepartureDate': future_dates})
+    future_df['DaysBeforeDeparture'] = (target_date - future_df['DepartureDate']).dt.days
     future_df['DayOfWeek'] = future_df['DepartureDate'].dt.dayofweek
     future_df['Month'] = future_df['DepartureDate'].dt.month
-    X_future = future_df[['DayOfWeek', 'Month']]
+    
+    X_future = future_df[['DaysBeforeDeparture', 'DayOfWeek', 'Month']]
     future_df['PredictedPrice'] = model.predict(X_future)
     return future_df
 
-# Function to save cleaned data
-def save_clean_data(df, filepath):
-    df.to_csv(filepath, index=False)
+# Function to find best days to buy
+def find_best_days_to_buy(future_df, n=5):
+    best_days = future_df.nsmallest(n, 'PredictedPrice')
+    return best_days
 
-# Function to plot historical prices
-def plot_historical_prices(df):
-    plt.figure(figsize=(10, 5))
-    plt.plot(df['DepartureDate'], df['Price'], marker='o')
-    plt.title('Historical Flight Prices')
-    plt.xlabel('Departure Date')
-    plt.ylabel('Price (USD)')
-    plt.grid(True)
-    st.pyplot(plt)
-
-# Function to plot future price predictions
-def plot_future_prices(future_df):
-    plt.figure(figsize=(10, 5))
-    plt.plot(future_df['DepartureDate'], future_df['PredictedPrice'], marker='o', color='orange')
-    plt.title('Predicted Future Flight Prices')
-    plt.xlabel('Departure Date')
+# Function to plot price predictions and best days
+def plot_price_predictions(future_df, best_days):
+    plt.figure(figsize=(12, 6))
+    plt.plot(future_df['DepartureDate'], future_df['PredictedPrice'], marker='o', alpha=0.5)
+    plt.scatter(best_days['DepartureDate'], best_days['PredictedPrice'], color='red', s=100, zorder=5)
+    plt.title('Predicted Flight Prices and Best Days to Buy')
+    plt.xlabel('Date')
     plt.ylabel('Predicted Price (USD)')
     plt.grid(True)
+    for _, row in best_days.iterrows():
+        plt.annotate(f"${row['PredictedPrice']:.2f}", 
+                     (row['DepartureDate'], row['PredictedPrice']),
+                     textcoords="offset points", xytext=(0,10), ha='center')
     st.pyplot(plt)
-
-# Function to display countdown
-def display_countdown(target_date):
-    today = datetime.today()
-    days_left = (target_date - today).days
-    st.metric(label="Days until September 10, 2025", value=days_left)
 
 # Streamlit app
 def main():
-    st.title("Italy 2025 - Tanner & Jill Tie The Knot")
-
-    # Countdown to September 10, 2025
-    target_date = datetime(2025, 9, 10)
-    display_countdown(target_date)
+    st.title("Flight Price Predictor")
 
     historical_csv = st.sidebar.text_input("Path to Historical Data CSV", value="flight_prices.csv")
-    train_model_option = st.sidebar.checkbox("Train Model", value=True)
-    predict_future_option = st.sidebar.checkbox("Predict Future Prices", value=True)
+    target_date = st.sidebar.date_input("Select target flight date", value=datetime(2025, 9, 10))
+    days_to_predict = st.sidebar.slider("Days to predict before target date", 30, 365, 180)
 
-    if train_model_option:
-        st.write("Loading and cleaning historical data...")
-        df = load_data(historical_csv)
-        df_clean = clean_data(df)
-        if 'Price' in df_clean.columns:
-            save_clean_data(df_clean, 'cleaned_flight_prices.csv')
-            st.success("Data cleaned and saved to cleaned_flight_prices.csv")
-            
-            st.write("Training model...")
-            df = preprocess_data(df_clean)
-            model = train_model(df)
-            joblib.dump(model, 'flight_price_model.pkl')
-            st.success("Model trained and saved to flight_price_model.pkl")
+    st.write("Loading and cleaning historical data...")
+    df = load_data(historical_csv)
+    df_clean = clean_data(df)
 
-            st.write("Visualizing historical flight prices...")
-            plot_historical_prices(df_clean)
+    if 'Price' in df_clean.columns:
+        st.success("Data cleaned successfully")
+        
+        st.write("Training model...")
+        df = preprocess_data(df_clean)
+        model = train_model(df)
 
-    if predict_future_option:
         st.write("Predicting future prices...")
-        model = joblib.load('flight_price_model.pkl')
-        future_dates = pd.date_range(start='2024-12-02', end='2025-09-05')
-        future_df = pd.DataFrame(future_dates, columns=['DepartureDate'])
-        future_df = predict_future_prices(model, future_df)
-        future_df.to_csv('future_prices.csv', index=False)
-        st.success("Future prices predicted and saved to future_prices.csv")
+        future_df = predict_future_prices(model, target_date, days_to_predict)
+        
+        st.write("Finding best days to buy...")
+        best_days = find_best_days_to_buy(future_df)
+        
+        st.write("Visualizing price predictions and best days to buy...")
+        plot_price_predictions(future_df, best_days)
 
-        st.write("Visualizing future flight price predictions...")
-        plot_future_prices(future_df)
-
-        st.write("Future Price Predictions")
-        st.dataframe(future_df)
+        st.write("Best Days to Buy Tickets:")
+        st.dataframe(best_days[['DepartureDate', 'PredictedPrice']])
 
 if __name__ == "__main__":
     main()
-
