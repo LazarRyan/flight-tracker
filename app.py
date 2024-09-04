@@ -58,7 +58,7 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
         
         if price is None:
             api_error_count += 1
-            if api_error_count > 5:  # If more than 5 consecutive errors, use existing data
+            if api_error_count > 2:  # If more than 2 consecutive errors, use existing data
                 st.warning("Too many API errors. Using existing data for predictions.")
                 return existing_data
             
