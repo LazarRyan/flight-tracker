@@ -50,7 +50,83 @@ amadeus = Client(
     client_secret=AMADEUS_CLIENT_SECRET
 )
 
-# ... (keep the existing functions: load_and_preprocess_data, get_flight_offers, process_and_combine_data, engineer_features, train_model, predict_prices)
+def load_and_preprocess_data(filepath):
+    if not os.path.exists(filepath):
+        st.error(f"File not found: {filepath}")
+        return pd.DataFrame()
+
+    try:
+        df = pd.read_csv(filepath, parse_dates=['departure'])
+        df = df[['departure', 'price']]
+        df = df.dropna()
+        df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
+        return df
+    except Exception as e:
+        st.error(f"Error loading data from {filepath}: {str(e)}")
+        return pd.DataFrame()
+
+def get_flight_offers(origin, destination, departure_date):
+    try:
+        response = amadeus.shopping.flight_offers_search.get(
+            originLocationCode=origin,
+            destinationLocationCode=destination,
+            departureDate=departure_date.strftime("%Y-%m-%d"),
+            adults=1
+        )
+        return response.data
+    except ResponseError as error:
+        st.error(f"Error fetching data from Amadeus API: {error}")
+        return []
+
+def process_and_combine_data(api_data, existing_data):
+    new_data = []
+    for offer in api_data:
+        price = float(offer['price']['total'])
+        departure = offer['itineraries'][0]['segments'][0]['departure']['at']
+        new_data.append({'departure': departure, 'price': price})
+    
+    new_df = pd.DataFrame(new_data)
+    new_df['departure'] = pd.to_datetime(new_df['departure'])
+    
+    combined_df = pd.concat([existing_data, new_df], ignore_index=True)
+    combined_df = combined_df.drop_duplicates(subset=['departure'], keep='last')
+    combined_df = combined_df.sort_values('departure')
+    
+    return combined_df
+
+def engineer_features(df):
+    df['day_of_week'] = df['departure'].dt.dayofweek
+    df['month'] = df['departure'].dt.month
+    df['days_to_flight'] = (df['departure'] - datetime.now()).dt.days
+    df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
+    return df
+
+def train_model(df):
+    X = df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
+    y = df['price']
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    
+    train_pred = model.predict(X_train)
+    test_pred = model.predict(X_test)
+    
+    train_mae = mean_absolute_error(y_train, train_pred)
+    test_mae = mean_absolute_error(y_test, test_pred)
+    
+    return model, train_mae, test_mae
+
+def predict_prices(model, start_date, end_date):
+    date_range = pd.date_range(start=start_date, end=end_date)
+    future_df = pd.DataFrame({'departure': date_range})
+    future_df = engineer_features(future_df)
+    
+    X_future = future_df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
+    future_df['predicted_price'] = model.predict(X_future)
+    
+    return future_df
 
 def plot_prices(df, title):
     st.line_chart(df.set_index('departure')['predicted_price'], use_container_width=True)
