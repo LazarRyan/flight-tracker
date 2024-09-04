@@ -23,41 +23,42 @@ amadeus = Client(
     client_secret=AMADEUS_CLIENT_SECRET
 )
 
-def safe_float(x):
-    try:
-        return float(x)
-    except (ValueError, TypeError):
-        return np.nan
-
 def safe_json_loads(x):
-    if not isinstance(x, str):
-        return x
-    try:
-        return json.loads(x)
-    except json.JSONDecodeError:
-        logging.warning(f"Failed to parse JSON: {x}")
-        return None
+    if isinstance(x, str):
+        try:
+            return json.loads(x)
+        except json.JSONDecodeError:
+            logging.warning(f"Failed to parse JSON: {x}")
+            return None
+    return x
 
 def safe_eval(x):
-    if not isinstance(x, str):
-        return x
-    try:
-        return eval(x)
-    except:
-        logging.warning(f"Failed to eval: {x}")
-        return None
+    if isinstance(x, str):
+        try:
+            return eval(x)
+        except:
+            logging.warning(f"Failed to eval: {x}")
+            return None
+    return x
 
 def load_data(filepath):
     if os.path.exists(filepath):
         try:
-            df = pd.read_csv(filepath, header=None, names=['date', 'price', 'itineraries', 'carriers', 'price_details'])
+            # Read CSV with header, skipping bad lines
+            df = pd.read_csv(filepath, parse_dates=['date'], 
+                             dtype={'price': float, 'itineraries': str, 'carriers': str, 'price_details': str},
+                             skipinitialspace=True, skip_blank_lines=True, error_bad_lines=False)
             
             if df.empty:
                 logging.warning(f"The file {filepath} exists but is empty.")
                 return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
             
-            df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
-            df['price'] = df['price'].apply(safe_float)
+            # Remove header row if it's still in the data
+            df = df[df['date'] != 'DepartureDate']
+            
+            # Convert price to float, replacing any non-numeric values with NaN
+            df['price'] = pd.to_numeric(df['price'], errors='coerce')
+            
             df['itineraries'] = df['itineraries'].apply(safe_json_loads)
             df['carriers'] = df['carriers'].apply(safe_eval)
             df['price_details'] = df['price_details'].apply(safe_json_loads)
@@ -66,7 +67,7 @@ def load_data(filepath):
                 if not isinstance(itinerary, list) or not itinerary:
                     return pd.NaT
                 try:
-                    return datetime.fromisoformat(itinerary[0]['segments'][0]['departure']['at'])
+                    return pd.to_datetime(itinerary[0]['segments'][0]['departure']['at'])
                 except (IndexError, KeyError, ValueError, TypeError):
                     logging.warning(f"Failed to extract departure from: {itinerary}")
                     return pd.NaT
@@ -216,7 +217,7 @@ def main():
             updated_data = collect_new_data(origin, destination, datetime.now().date(), target_date, existing_data)
             
             if len(updated_data) > len(existing_data):
-                updated_data.to_csv(historical_data_path, index=False, header=False)
+                updated_data.to_csv(historical_data_path, index=False)
                 st.success(f"New data added and saved to {historical_data_path}.")
             else:
                 st.info("No new data added. Using existing historical data.")
