@@ -67,7 +67,7 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
             break
         
         # Check if we already have data for this date
-        if not existing_data.empty and departure_date.date() in existing_data['departure'].dt.date.values:
+        if not existing_data.empty and departure_date.date() in existing_data['date'].dt.date.values:
             continue
         
         offers = get_flight_offers(origin, destination, departure_date)
@@ -79,13 +79,13 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
                 'date': departure_date.date(),
                 'price': price,
                 'itineraries': json.dumps(offers[0]['itineraries']),
-                'carriers': json.dumps(offers[0]['validatingAirlineCodes']),
+                'carriers': str(offers[0]['validatingAirlineCodes']),
                 'price_details': json.dumps(offers[0]['travelerPricings']),
                 'departure': datetime.fromisoformat(offers[0]['itineraries'][0]['segments'][0]['departure']['at'])
             })
     
     new_df = pd.DataFrame(new_data)
-    return pd.concat([existing_data, new_df], ignore_index=True).sort_values('departure')
+    return pd.concat([existing_data, new_df], ignore_index=True).sort_values('date')
 
 # Function to preprocess data
 def preprocess_data(df):
