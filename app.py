@@ -54,48 +54,27 @@ amadeus = Client(
 def format_price(price):
     return f"${price:,.2f}"
 
-def load_and_preprocess_data(filepath):
-    if not os.path.exists(filepath):
-        st.error(f"File not found: {filepath}")
-        return pd.DataFrame()
+def load_and_preprocess_data(master_filepath, route_filepath):
+    master_df = pd.DataFrame(columns=['departure', 'price', 'origin', 'destination'])
+    route_df = pd.DataFrame(columns=['departure', 'price'])
 
-    try:
-        df = pd.read_csv(filepath, parse_dates=['DepartureDate'])
-        df = df.rename(columns={
-            'DepartureDate': 'departure',
-            'Price': 'price',
-            'Itineraries': 'itineraries',
-            'ValidatingAirlineCodes': 'carriers',
-            'TravelerPricings': 'price_details'
-        })
+    if os.path.exists(master_filepath):
+        master_df = pd.read_csv(master_filepath, parse_dates=['departure'])
+    else:
+        st.warning(f"Master file not found: {master_filepath}. Starting with an empty master dataset.")
+
+    if os.path.exists(route_filepath):
+        route_df = pd.read_csv(route_filepath, parse_dates=['departure'])
+    else:
+        st.info(f"Route-specific file not found: {route_filepath}. Starting with an empty route dataset.")
+
+    # Ensure data types and remove invalid entries
+    for df in [master_df, route_df]:
         df['price'] = pd.to_numeric(df['price'], errors='coerce')
-        
-        def extract_price(price_data):
-            try:
-                price_dict = json.loads(price_data.replace("'", "\""))
-                return float(price_dict[0]['price']['total'])
-            except:
-                return np.nan
-        
-        def extract_departure(itinerary_data):
-            try:
-                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
-                return itinerary_dict[0]['segments'][0]['departure']['at']
-            except:
-                return np.nan
-        
-        if df['price'].isnull().all() or df['price'].max() == 'Price':
-            df['price'] = df['price_details'].apply(extract_price)
-            df['departure'] = df['itineraries'].apply(extract_departure)
-        
-        df['departure'] = pd.to_datetime(df['departure'])
         df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
-        
-        return df[['departure', 'price']]
-    except Exception as e:
-        st.error(f"Error loading data from {filepath}: {str(e)}")
-        return pd.DataFrame()
+
+    return master_df, route_df
 
 def should_call_api(origin, destination):
     cache_file = "api_calls.json"
@@ -144,22 +123,32 @@ def get_flight_offers(origin, destination, departure_date):
     except ResponseError as error:
         st.error(f"Error fetching data from Amadeus API: {error}")
         return []
+    except Exception as e:
+        st.error(f"Unexpected error when calling Amadeus API: {str(e)}")
+        return []
 
-def process_and_combine_data(api_data, existing_data):
+def process_and_combine_data(api_data, master_df, route_df, origin, destination):
     new_data = []
     for offer in api_data:
         price = float(offer['price']['total'])
         departure = offer['itineraries'][0]['segments'][0]['departure']['at']
-        new_data.append({'departure': departure, 'price': price})
+        new_data.append({'departure': departure, 'price': price, 'origin': origin, 'destination': destination})
     
     new_df = pd.DataFrame(new_data)
     new_df['departure'] = pd.to_datetime(new_df['departure'])
     
-    combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-    combined_df = combined_df.drop_duplicates(subset=['departure'], keep='last')
-    combined_df = combined_df.sort_values('departure')
+    # Update master DataFrame
+    master_df = pd.concat([master_df, new_df], ignore_index=True)
+    master_df = master_df.drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+    master_df = master_df.sort_values('departure')
     
-    return combined_df
+    # Update route-specific DataFrame
+    route_new_df = new_df[['departure', 'price']]
+    route_df = pd.concat([route_df, route_new_df], ignore_index=True)
+    route_df = route_df.drop_duplicates(subset=['departure'], keep='last')
+    route_df = route_df.sort_values('departure')
+    
+    return master_df, route_df
 
 def engineer_features(df):
     df['day_of_week'] = df['departure'].dt.dayofweek
@@ -227,36 +216,36 @@ def main():
     
     if st.button("🔍 Predict Prices"):
         with st.spinner("Loading data and making predictions..."):
-            csv_filename = f"flight_prices_{origin}_{destination}.csv"
-            existing_data = load_and_preprocess_data(csv_filename)
+            master_csv_filename = "flight_prices_master.csv"
+            route_csv_filename = f"flight_prices_{origin}_{destination}.csv"
+            master_data, route_data = load_and_preprocess_data(master_csv_filename, route_csv_filename)
             
-            if existing_data.empty:
-                st.warning("⚠️ No existing data found. Attempting to fetch data from API.")
+            if route_data.empty:
+                st.warning("⚠️ No existing data found for this route. Attempting to fetch data from API.")
             else:
-                st.success(f"✅ Loaded {len(existing_data)} records from existing data.")
+                st.success(f"✅ Loaded {len(route_data)} records for this route from existing data.")
             
             if should_call_api(origin, destination):
                 api_data = get_flight_offers(origin, destination, target_date)
                 if api_data:
                     st.success("✅ Successfully fetched new data from Amadeus API")
-                    combined_data = process_and_combine_data(api_data, existing_data)
-                    combined_data.to_csv(csv_filename, index=False)
-                    st.success(f"💾 Updated data saved to {csv_filename}")
+                    master_data, route_data = process_and_combine_data(api_data, master_data, route_data, origin, destination)
+                    master_data.to_csv(master_csv_filename, index=False)
+                    route_data.to_csv(route_csv_filename, index=False)
+                    st.success(f"💾 Updated data saved to {master_csv_filename} and {route_csv_filename}")
                     update_api_call_time(origin, destination)
                 else:
                     st.warning("⚠️ No new data fetched from API. Using existing data.")
-                    combined_data = existing_data
             else:
                 st.info("ℹ️ Using cached data. API call limit reached for this route today.")
-                combined_data = existing_data
             
-            if not combined_data.empty:
-                st.write(f"📊 Total records for analysis: {len(combined_data)}")
+            if not route_data.empty:
+                st.write(f"📊 Total records for analysis: {len(route_data)}")
                 
                 with st.expander("View Sample Data"):
-                    st.dataframe(combined_data.head())
+                    st.dataframe(route_data.head())
                 
-                df = engineer_features(combined_data)
+                df = engineer_features(route_data)
                 model, train_mae, test_mae = train_model(df)
                 
                 st.info(f"🤖 Model trained. Train MAE: {format_price(train_mae)}, Test MAE: {format_price(test_mae)}")
