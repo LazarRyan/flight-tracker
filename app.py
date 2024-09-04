@@ -52,18 +52,16 @@ def load_data(filepath):
         try:
             df = pd.read_csv(filepath, header=None, names=['date', 'price', 'itineraries', 'carriers', 'price_details'])
             
-            # Convert date string to datetime more explicitly
+            if df.empty:
+                logging.warning(f"The file {filepath} exists but is empty.")
+                return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
+            
             df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
-            
-            # Safely convert price to float
             df['price'] = df['price'].apply(safe_float)
-            
-            # Safely parse JSON and list strings
             df['itineraries'] = df['itineraries'].apply(safe_json_loads)
             df['carriers'] = df['carriers'].apply(safe_eval)
             df['price_details'] = df['price_details'].apply(safe_json_loads)
             
-            # Extract departure datetime from itineraries
             def extract_departure(itinerary):
                 if not isinstance(itinerary, list) or not itinerary:
                     return pd.NaT
@@ -74,11 +72,12 @@ def load_data(filepath):
                     return pd.NaT
 
             df['departure'] = df['itineraries'].apply(extract_departure)
-            
-            # Remove rows with NaN prices or departures
             df = df.dropna(subset=['price', 'departure'])
             
-            logging.info(f"Loaded {len(df)} rows from {filepath}")
+            if df.empty:
+                logging.warning(f"After processing, no valid data remains in {filepath}.")
+            else:
+                logging.info(f"Loaded {len(df)} rows from {filepath}")
             return df
         except Exception as e:
             logging.exception(f"Error loading data from {filepath}: {str(e)}")
@@ -115,7 +114,6 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
             logging.info("API call limit reached. Using existing data for remaining predictions.")
             break
         
-        # Check if we already have data for this date
         if not existing_data.empty and departure_date.date() in existing_data['date'].dt.date.values:
             continue
         
@@ -153,7 +151,6 @@ def train_model(df):
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     
-    # Evaluate model
     train_predictions = model.predict(X_train)
     test_predictions = model.predict(X_test)
     
@@ -196,28 +193,28 @@ def main():
     st.title("Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
 
-    # User inputs
     origin = st.text_input("Origin Airport Code", "JFK")
     destination = st.text_input("Destination Airport Code", "FCO")  # Rome, Italy
     target_date = st.date_input("Target Flight Date", value=datetime(2025, 9, 10).date())
     
     display_countdown(target_date)
     
-    historical_data_path = "historical_prices.csv"
+    historical_data_path = "flight_prices.csv"
     
     if st.button("Update Data and Predict"):
         try:
-            # Load existing data
             existing_data = load_data(historical_data_path)
             
             if existing_data.empty:
-                st.warning(f"No existing data found in {historical_data_path}. Will attempt to collect new data.")
+                st.warning(f"No valid existing data found in {historical_data_path}. Will attempt to collect new data.")
+                if os.path.exists(historical_data_path):
+                    st.info(f"The file {historical_data_path} exists but contains no valid data.")
+                else:
+                    st.info(f"The file {historical_data_path} does not exist. It will be created when new data is collected.")
             
-            # Collect new data (limited to 2 API calls)
             st.write("Collecting new data...")
             updated_data = collect_new_data(origin, destination, datetime.now().date(), target_date, existing_data)
             
-            # Save updated data only if new data was added
             if len(updated_data) > len(existing_data):
                 updated_data.to_csv(historical_data_path, index=False, header=False)
                 st.success(f"New data added and saved to {historical_data_path}.")
@@ -225,12 +222,10 @@ def main():
                 st.info("No new data added. Using existing historical data.")
             
             if not updated_data.empty and not updated_data['price'].isnull().all():
-                # Preprocess and train model
                 st.write("Training model...")
                 df = preprocess_data(updated_data)
                 model = train_model(df)
                 
-                # Predict future prices
                 st.write("Predicting future prices...")
                 future_dates = pd.date_range(start=datetime.now(), end=target_date)
                 future_df = pd.DataFrame({'departure': future_dates})
@@ -238,7 +233,6 @@ def main():
                 future_df = predict_future_prices(model, future_df)
                 best_days = find_best_days_to_buy(future_df)
                 
-                # Visualize results
                 st.subheader("Price Prediction Chart")
                 plot_price_predictions(future_df, best_days)
                 
