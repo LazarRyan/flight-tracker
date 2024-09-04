@@ -13,7 +13,7 @@ from amadeus import Client, ResponseError
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS (unchanged)
+# Custom CSS
 st.markdown("""
 <style>
     .reportview-container {
@@ -56,22 +56,49 @@ def format_price(price):
 
 def load_and_preprocess_data(filepath, origin, destination):
     if not os.path.exists(filepath):
-        st.warning(f"File not found: {filepath}. Starting with an empty dataset.")
-        return pd.DataFrame(columns=['departure', 'price', 'origin', 'destination'])
+        st.error(f"File not found: {filepath}")
+        return pd.DataFrame()
 
     try:
-        df = pd.read_csv(filepath, parse_dates=['departure'])
+        df = pd.read_csv(filepath, parse_dates=['DepartureDate'])
+        df = df.rename(columns={
+            'DepartureDate': 'departure',
+            'Price': 'price',
+            'Itineraries': 'itineraries',
+            'ValidatingAirlineCodes': 'carriers',
+            'TravelerPricings': 'price_details'
+        })
+        df['price'] = pd.to_numeric(df['price'], errors='coerce')
+        
+        def extract_price(price_data):
+            try:
+                price_dict = json.loads(price_data.replace("'", "\""))
+                return float(price_dict[0]['price']['total'])
+            except:
+                return np.nan
+        
+        def extract_departure(itinerary_data):
+            try:
+                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
+                return itinerary_dict[0]['segments'][0]['departure']['at']
+            except:
+                return np.nan
+        
+        if df['price'].isnull().all() or df['price'].max() == 'Price':
+            df['price'] = df['price_details'].apply(extract_price)
+            df['departure'] = df['itineraries'].apply(extract_departure)
+        
+        df['departure'] = pd.to_datetime(df['departure'])
+        df = df.dropna(subset=['price', 'departure'])
+        df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
+        
         # Filter for the specific route
         route_df = df[(df['origin'] == origin) & (df['destination'] == destination)]
-        
-        route_df['price'] = pd.to_numeric(route_df['price'], errors='coerce')
-        route_df = route_df.dropna(subset=['price', 'departure'])
-        route_df = route_df[(route_df['price'] > 0) & (route_df['departure'] > '2023-01-01')]
         
         return route_df[['departure', 'price', 'origin', 'destination']]
     except Exception as e:
         st.error(f"Error loading data from {filepath}: {str(e)}")
-        return pd.DataFrame(columns=['departure', 'price', 'origin', 'destination'])
+        return pd.DataFrame()
 
 def should_call_api(origin, destination):
     cache_file = "api_calls.json"
@@ -203,8 +230,7 @@ def main():
     
     if st.button("🔍 Predict Prices"):
         with st.spinner("Loading data and making predictions..."):
-            master_csv_filename = "flight_prices.csv"
-            existing_data = load_and_preprocess_data(master_csv_filename, origin, destination)
+            existing_data = load_and_preprocess_data("flight_prices.csv", origin, destination)
             
             if existing_data.empty:
                 st.warning(f"⚠️ No existing data found for route {origin} to {destination}. Attempting to fetch data from API.")
@@ -218,11 +244,11 @@ def main():
                     combined_data = process_and_combine_data(api_data, existing_data, origin, destination)
                     
                     # Load all existing data, update with new data, and save back to CSV
-                    all_data = load_and_preprocess_data(master_csv_filename, None, None)
+                    all_data = load_and_preprocess_data("flight_prices.csv", None, None)
                     all_data = pd.concat([all_data, combined_data]).drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
-                    all_data.to_csv(master_csv_filename, index=False)
+                    all_data.to_csv("flight_prices.csv", index=False)
                     
-                    st.success(f"💾 Updated data saved to {master_csv_filename}")
+                    st.success("💾 Updated data saved to flight_prices.csv")
                     update_api_call_time(origin, destination)
                 else:
                     st.warning("⚠️ No new data fetched from API. Using existing data.")
