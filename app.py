@@ -19,45 +19,56 @@ amadeus = Client(
     client_secret=AMADEUS_CLIENT_SECRET
 )
 
-# Function to load and preprocess data
 def load_and_preprocess_data(filepath):
-    if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
-        st.warning(f"File not found or empty: {filepath}")
-        return pd.DataFrame(columns=['departure', 'price'])
+    if not os.path.exists(filepath):
+        st.error(f"File not found: {filepath}")
+        return pd.DataFrame()
 
     try:
-        df = pd.read_csv(filepath)
-    except pd.errors.EmptyDataError:
-        st.warning(f"The file {filepath} is empty.")
-        return pd.DataFrame(columns=['departure', 'price'])
+        # Read CSV with header
+        df = pd.read_csv(filepath, parse_dates=['DepartureDate'])
+        
+        # Rename columns to match our expected format
+        df = df.rename(columns={
+            'DepartureDate': 'departure',
+            'Price': 'price',
+            'Itineraries': 'itineraries',
+            'ValidatingAirlineCodes': 'carriers',
+            'TravelerPricings': 'price_details'
+        })
+        
+        # Convert price to float, replacing any non-numeric values with NaN
+        df['price'] = pd.to_numeric(df['price'], errors='coerce')
+        
+        def extract_price(price_data):
+            try:
+                price_dict = json.loads(price_data.replace("'", "\""))
+                return float(price_dict[0]['price']['total'])
+            except:
+                return np.nan
+        
+        def extract_departure(itinerary_data):
+            try:
+                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
+                return itinerary_dict[0]['segments'][0]['departure']['at']
+            except:
+                return np.nan
+        
+        # Only process these columns if the price column is empty or has issues
+        if df['price'].isnull().all() or df['price'].max() == 'Price':
+            df['price'] = df['price_details'].apply(extract_price)
+            df['departure'] = df['itineraries'].apply(extract_departure)
+        
+        df['departure'] = pd.to_datetime(df['departure'])
+        
+        df = df.dropna(subset=['price', 'departure'])
+        df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
+        
+        return df[['departure', 'price']]
+    except Exception as e:
+        st.error(f"Error loading data from {filepath}: {str(e)}")
+        return pd.DataFrame()
 
-    def extract_price(price_data):
-        try:
-            price_dict = json.loads(price_data.replace("'", "\""))
-            return float(price_dict['price']['total'])
-        except:
-            return np.nan
-    
-    def extract_departure(itinerary_data):
-        try:
-            itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
-            return itinerary_dict[0]['segments'][0]['departure']['at']
-        except:
-            return np.nan
-    
-    if 'price_details' in df.columns:
-        df['price'] = df['price_details'].apply(extract_price)
-    if 'itineraries' in df.columns:
-        df['departure'] = df['itineraries'].apply(extract_departure)
-    
-    df['departure'] = pd.to_datetime(df['departure'])
-    
-    df = df.dropna(subset=['price', 'departure'])
-    df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
-    
-    return df[['departure', 'price']]
-
-# Function to get flight offers from Amadeus API
 def get_flight_offers(origin, destination, departure_date):
     try:
         response = amadeus.shopping.flight_offers_search.get(
@@ -71,7 +82,6 @@ def get_flight_offers(origin, destination, departure_date):
         st.error(f"Error fetching data from Amadeus API: {error}")
         return []
 
-# Function to process API data and combine with existing data
 def process_and_combine_data(api_data, existing_data):
     new_data = []
     for offer in api_data:
@@ -88,7 +98,6 @@ def process_and_combine_data(api_data, existing_data):
     
     return combined_df
 
-# Function to engineer features
 def engineer_features(df):
     df['day_of_week'] = df['departure'].dt.dayofweek
     df['month'] = df['departure'].dt.month
@@ -96,12 +105,7 @@ def engineer_features(df):
     df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
     return df
 
-# Function to train model
 def train_model(df):
-    if len(df) < 2:
-        st.error("Not enough data to train the model.")
-        return None, None, None
-
     X = df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
     y = df['price']
     
@@ -118,7 +122,6 @@ def train_model(df):
     
     return model, train_mae, test_mae
 
-# Function to predict prices
 def predict_prices(model, start_date, end_date):
     date_range = pd.date_range(start=start_date, end=end_date)
     future_df = pd.DataFrame({'departure': date_range})
@@ -129,7 +132,6 @@ def predict_prices(model, start_date, end_date):
     
     return future_df
 
-# Function to plot prices
 def plot_prices(df, title):
     plt.figure(figsize=(12, 6))
     plt.plot(df['departure'], df['predicted_price'], marker='o')
@@ -139,21 +141,22 @@ def plot_prices(df, title):
     plt.grid(True)
     st.pyplot(plt)
 
-# Main Streamlit app
 def main():
     st.title("Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
 
-    # Sidebar for user inputs
     st.sidebar.header("User Input")
     origin = st.sidebar.text_input("Origin Airport Code", "JFK")
     destination = st.sidebar.text_input("Destination Airport Code", "FCO")
     target_date = st.sidebar.date_input("Target Flight Date", value=datetime(2025, 9, 10))
     
-    # Load existing data
     existing_data = load_and_preprocess_data("flight_prices.csv")
     
-    # Attempt API call for the target date
+    if existing_data.empty:
+        st.warning("No existing data found. Attempting to fetch data from API.")
+    else:
+        st.success(f"Loaded {len(existing_data)} records from existing data.")
+    
     api_data = get_flight_offers(origin, destination, target_date)
     
     if api_data:
@@ -166,36 +169,30 @@ def main():
         combined_data = existing_data
     
     if not combined_data.empty:
-        st.write(f"Number of records: {len(combined_data)}")
+        st.write(f"Total records for analysis: {len(combined_data)}")
         st.write("Sample data:")
         st.write(combined_data.head())
         
         df = engineer_features(combined_data)
         model, train_mae, test_mae = train_model(df)
         
-        if model is not None:
-            st.write(f"Model trained. Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
-            
-            # Predict prices for the next year
-            start_date = datetime.now().date()
-            end_date = target_date + timedelta(days=30)  # Predict up to a month after the target date
-            future_prices = predict_prices(model, start_date, end_date)
-            
-            st.subheader("Predicted Prices")
-            plot_prices(future_prices, "Predicted Flight Prices")
-            
-            # Find best days to buy
-            best_days = future_prices.nsmallest(5, 'predicted_price')
-            st.subheader("Best Days to Buy Tickets")
-            st.write(best_days[['departure', 'predicted_price']])
-            
-            # Countdown to target date
-            days_left = (target_date - datetime.now().date()).days
-            st.metric(label=f"Days until {target_date}", value=days_left)
-        else:
-            st.error("Unable to train model due to insufficient data.")
+        st.write(f"Model trained. Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
+        
+        start_date = datetime.now().date()
+        end_date = target_date + timedelta(days=30)
+        future_prices = predict_prices(model, start_date, end_date)
+        
+        st.subheader("Predicted Prices")
+        plot_prices(future_prices, "Predicted Flight Prices")
+        
+        best_days = future_prices.nsmallest(5, 'predicted_price')
+        st.subheader("Best Days to Buy Tickets")
+        st.write(best_days[['departure', 'predicted_price']])
+        
+        days_left = (target_date - datetime.now().date()).days
+        st.metric(label=f"Days until {target_date}", value=days_left)
     else:
-        st.error("No data available for prediction. Please try fetching data from the API.")
+        st.error("No data available for prediction. Please check your data source or try again later.")
 
 if __name__ == "__main__":
     main()

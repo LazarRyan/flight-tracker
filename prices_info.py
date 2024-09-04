@@ -48,8 +48,17 @@ def analyze_csv():
         if unique_columns:
             print(f"\nColumns with all unique values: {unique_columns}")
         
+        # Check for any potential delimiter issues
+        with open('flight_prices.csv', 'r') as f:
+            first_line = f.readline().strip()
+            print(f"\nFirst line of the file:")
+            print(first_line)
+            print(f"Number of commas in the first line: {first_line.count(',')}")
+        
     except FileNotFoundError:
         print("The file 'flight_prices.csv' was not found in the current directory.")
+    except pd.errors.EmptyDataError:
+        print("The file 'flight_prices.csv' is empty.")
     except Exception as e:
         print(f"An error occurred while analyzing the CSV: {str(e)}")
 
