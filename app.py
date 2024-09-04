@@ -170,14 +170,13 @@ def predict_prices(model, start_date, end_date):
     
     X_future = future_df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
     future_df['predicted price'] = model.predict(X_future)
-    future_df['predicted price'] = future_df['predicted price'].apply(format_price)
+    future_df['formatted price'] = future_df['predicted price'].apply(format_price)
     
     return future_df
 
 def plot_prices(df, title):
     fig, ax = plt.subplots(figsize=(10, 5))
-    df['numeric_price'] = df['predicted price'].str.replace('$', '').str.replace(',', '').astype(float)
-    ax.plot(df['departure'], df['numeric_price'], marker='o', color='#4F8BF9')
+    ax.plot(df['departure'], df['predicted price'], marker='o', color='#4F8BF9')
     ax.set_title(title, color='black', fontsize=16)
     ax.set_xlabel('Departure Date', color='black')
     ax.set_ylabel('Predicted Price (USD)', color='black')
@@ -261,7 +260,7 @@ def main():
                 
                 best_days = future_prices.nsmallest(5, 'predicted price')
                 st.subheader("💰 Best Days to Buy Tickets")
-                st.table(best_days[['departure', 'predicted price']].set_index('departure'))
+                st.table(best_days[['departure', 'formatted price']].set_index('departure'))
                 
                 days_left = (target_date - datetime.now().date()).days
                 st.metric(label=f"⏳ Days until {target_date}", value=days_left)
