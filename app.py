@@ -13,7 +13,7 @@ from amadeus import Client, ResponseError
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS (unchanged)
+# Custom CSS
 st.markdown("""
 <style>
     .reportview-container {
@@ -84,69 +84,31 @@ def load_and_preprocess_data(filepath):
             except:
                 return np.nan
         
-        def extract_origin(itinerary_data):
-            try:
-                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
-                return itinerary_dict[0]['segments'][0]['departure']['iataCode']
-            except:
-                return np.nan
-        
-        def extract_destination(itinerary_data):
-            try:
-                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
-                return itinerary_dict[0]['segments'][-1]['arrival']['iataCode']
-            except:
-                return np.nan
-        
         if df['price'].isnull().all() or df['price'].max() == 'Price':
             df['price'] = df['price_details'].apply(extract_price)
             df['departure'] = df['itineraries'].apply(extract_departure)
-            df['origin'] = df['itineraries'].apply(extract_origin)
-            df['destination'] = df['itineraries'].apply(extract_destination)
         
         df['departure'] = pd.to_datetime(df['departure'])
-        df = df.dropna(subset=['price', 'departure', 'origin', 'destination'])
+        df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
         
-        return df[['departure', 'price', 'origin', 'destination']]
+        return df[['departure', 'price']]
     except Exception as e:
         st.error(f"Error loading data from {filepath}: {str(e)}")
         return pd.DataFrame()
 
-def should_call_api(origin, destination):
-    cache_file = "api_calls.json"
-    today = datetime.now().date().isoformat()
-    
+def should_call_api():
+    cache_file = "last_api_call.txt"
     if os.path.exists(cache_file):
         with open(cache_file, "r") as f:
-            api_calls = json.load(f)
-    else:
-        api_calls = {}
-    
-    route_key = f"{origin}-{destination}"
-    
-    if today in api_calls and route_key in api_calls[today]:
-        return False
+            last_call = datetime.fromisoformat(f.read().strip())
+        if datetime.now() - last_call < timedelta(days=1):
+            return False
     return True
 
-def update_api_call_time(origin, destination):
-    cache_file = "api_calls.json"
-    today = datetime.now().date().isoformat()
-    
-    if os.path.exists(cache_file):
-        with open(cache_file, "r") as f:
-            api_calls = json.load(f)
-    else:
-        api_calls = {}
-    
-    if today not in api_calls:
-        api_calls[today] = {}
-    
-    route_key = f"{origin}-{destination}"
-    api_calls[today][route_key] = datetime.now().isoformat()
-    
-    with open(cache_file, "w") as f:
-        json.dump(api_calls, f)
+def update_api_call_time():
+    with open("last_api_call.txt", "w") as f:
+        f.write(datetime.now().isoformat())
 
 def get_flight_offers(origin, destination, departure_date):
     try:
@@ -161,18 +123,18 @@ def get_flight_offers(origin, destination, departure_date):
         st.error(f"Error fetching data from Amadeus API: {error}")
         return []
 
-def process_and_combine_data(api_data, existing_data, origin, destination):
+def process_and_combine_data(api_data, existing_data):
     new_data = []
     for offer in api_data:
         price = float(offer['price']['total'])
         departure = offer['itineraries'][0]['segments'][0]['departure']['at']
-        new_data.append({'departure': departure, 'price': price, 'origin': origin, 'destination': destination})
+        new_data.append({'departure': departure, 'price': price})
     
     new_df = pd.DataFrame(new_data)
     new_df['departure'] = pd.to_datetime(new_df['departure'])
     
     combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-    combined_df = combined_df.drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+    combined_df = combined_df.drop_duplicates(subset=['departure'], keep='last')
     combined_df = combined_df.sort_values('departure')
     
     return combined_df
@@ -243,36 +205,35 @@ def main():
     
     if st.button("🔍 Predict Prices"):
         with st.spinner("Loading data and making predictions..."):
-            all_data = load_and_preprocess_data("flight_prices.csv")
+            existing_data = load_and_preprocess_data("flight_prices.csv")
             
-            if all_data.empty:
+            if existing_data.empty:
                 st.warning("⚠️ No existing data found. Attempting to fetch data from API.")
             else:
-                st.success(f"✅ Loaded {len(all_data)} records from existing data.")
+                st.success(f"✅ Loaded {len(existing_data)} records from existing data.")
             
-            route_data = all_data[(all_data['origin'] == origin) & (all_data['destination'] == destination)]
-            
-            if should_call_api(origin, destination):
+            if should_call_api():
                 api_data = get_flight_offers(origin, destination, target_date)
                 if api_data:
                     st.success("✅ Successfully fetched new data from Amadeus API")
-                    all_data = process_and_combine_data(api_data, all_data, origin, destination)
-                    all_data.to_csv("flight_prices.csv", index=False)
+                    combined_data = process_and_combine_data(api_data, existing_data)
+                    combined_data.to_csv("flight_prices.csv", index=False)
                     st.success("💾 Updated data saved to flight_prices.csv")
-                    update_api_call_time(origin, destination)
-                    route_data = all_data[(all_data['origin'] == origin) & (all_data['destination'] == destination)]
+                    update_api_call_time()
                 else:
                     st.warning("⚠️ No new data fetched from API. Using existing data.")
+                    combined_data = existing_data
             else:
-                st.info("ℹ️ Using cached data. API call limit reached for this route today.")
+                st.info("ℹ️ Using cached data. API call limit reached for today.")
+                combined_data = existing_data
             
-            if not route_data.empty:
-                st.write(f"📊 Total records for analysis: {len(route_data)}")
+            if not combined_data.empty:
+                st.write(f"📊 Total records for analysis: {len(combined_data)}")
                 
                 with st.expander("View Sample Data"):
-                    st.dataframe(route_data.head())
+                    st.dataframe(combined_data.head())
                 
-                df = engineer_features(route_data)
+                df = engineer_features(combined_data)
                 model, train_mae, test_mae = train_model(df)
                 
                 st.info(f"🤖 Model trained. Train MAE: {format_price(train_mae)}, Test MAE: {format_price(test_mae)}")
@@ -285,7 +246,7 @@ def main():
                 with st.container():
                     col1, col2, col3 = st.columns([1,3,1])
                     with col2:
-                        plot_prices(future_prices, f"Predicted Flight Prices ({origin} to {destination})")
+                        plot_prices(future_prices, "Predicted Flight Prices")
                 
                 best_days = future_prices.nsmallest(5, 'predicted price')
                 st.subheader("💰 Best Days to Buy Tickets")
