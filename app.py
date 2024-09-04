@@ -22,9 +22,18 @@ amadeus = Client(
 # Function to load data
 def load_data(filepath):
     if os.path.exists(filepath):
-        df = pd.read_csv(filepath, parse_dates=['departure'])
+        df = pd.read_csv(filepath, header=None, names=['date', 'price', 'itineraries', 'carriers', 'price_details'])
+        df['date'] = pd.to_datetime(df['date'])
+        df['price'] = df['price'].astype(float)
+        df['itineraries'] = df['itineraries'].apply(json.loads)
+        df['carriers'] = df['carriers'].apply(eval)
+        df['price_details'] = df['price_details'].apply(json.loads)
+        
+        # Extract departure datetime from itineraries
+        df['departure'] = df['itineraries'].apply(lambda x: datetime.fromisoformat(x[0]['segments'][0]['departure']['at']))
+        
         return df
-    return pd.DataFrame(columns=['departure', 'price', 'itineraries', 'carriers', 'price_details'])
+    return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
 
 # Function to get flight offers with error handling
 def get_flight_offers(origin, destination, departure_date):
@@ -58,7 +67,7 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
             break
         
         # Check if we already have data for this date
-        if not existing_data.empty and departure_date in existing_data['departure'].dt.date.values:
+        if not existing_data.empty and departure_date.date() in existing_data['departure'].dt.date.values:
             continue
         
         offers = get_flight_offers(origin, destination, departure_date)
@@ -67,11 +76,12 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
         if offers:
             price = extract_price(offers)
             new_data.append({
-                'departure': departure_date,
+                'date': departure_date.date(),
                 'price': price,
                 'itineraries': json.dumps(offers[0]['itineraries']),
                 'carriers': json.dumps(offers[0]['validatingAirlineCodes']),
-                'price_details': json.dumps(offers[0]['travelerPricings'])
+                'price_details': json.dumps(offers[0]['travelerPricings']),
+                'departure': datetime.fromisoformat(offers[0]['itineraries'][0]['segments'][0]['departure']['at'])
             })
     
     new_df = pd.DataFrame(new_data)
@@ -81,7 +91,7 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
 def preprocess_data(df):
     df['DayOfWeek'] = df['departure'].dt.dayofweek
     df['Month'] = df['departure'].dt.month
-    df['DaysToFlight'] = (df['departure'] - datetime.now().date()).dt.days
+    df['DaysToFlight'] = (df['departure'] - datetime.now()).dt.days
     df['IsWeekend'] = df['DayOfWeek'].isin([5, 6]).astype(int)
     df['IsHoliday'] = ((df['Month'] == 12) & (df['departure'].dt.day >= 20)).astype(int)
     return df
@@ -157,13 +167,16 @@ def main():
         # Load existing data
         existing_data = load_data(historical_data_path)
         
+        if existing_data.empty:
+            st.warning(f"No existing data found in {historical_data_path}. Will attempt to collect new data.")
+        
         # Collect new data (limited to 2 API calls)
         st.write("Collecting new data...")
         updated_data = collect_new_data(origin, destination, datetime.now().date(), target_date, existing_data)
         
         # Save updated data only if new data was added
         if len(updated_data) > len(existing_data):
-            updated_data.to_csv(historical_data_path, index=False)
+            updated_data.to_csv(historical_data_path, index=False, header=False)
             st.success(f"New data added and saved to {historical_data_path}.")
         else:
             st.info("No new data added. Using existing historical data.")
@@ -176,7 +189,7 @@ def main():
             
             # Predict future prices
             st.write("Predicting future prices...")
-            future_dates = pd.date_range(start=datetime.now().date(), end=target_date)
+            future_dates = pd.date_range(start=datetime.now(), end=target_date)
             future_df = pd.DataFrame({'departure': future_dates})
             future_df = preprocess_data(future_df)
             future_df = predict_future_prices(model, future_df)
