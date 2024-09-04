@@ -182,22 +182,12 @@ def plot_prices(df, title):
     ax.set_ylabel('Predicted Price (USD)', color='black')
     ax.grid(True, color='gray', linestyle='--', alpha=0.7)
     
-    # Format y-axis ticks to show dollar amounts
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.2f}'))
-    
-    # Ensure y-axis starts at 0
     ax.set_ylim(bottom=0)
-    
-    # Adjust tick colors
     ax.tick_params(colors='black', which='both')
-    
-    # Rotate x-axis labels for better readability
     fig.autofmt_xdate()
-    
-    # Adjust layout to prevent cutting off labels
     plt.tight_layout()
     
-    # Use Streamlit's native plotting function
     st.pyplot(fig)
 
 def main():
@@ -260,7 +250,7 @@ def main():
                 
                 best_days = future_prices.nsmallest(5, 'predicted price')
                 st.subheader("💰 Best Days to Buy Tickets")
-                st.table(best_days[['departure', 'formatted price']].set_index('departure'))
+                st.table(best_days[['departure', 'formatted price']].rename(columns={'formatted price': 'predicted price'}).set_index('departure'))
                 
                 days_left = (target_date - datetime.now().date()).days
                 st.metric(label=f"⏳ Days until {target_date}", value=days_left)
