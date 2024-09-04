@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
+import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import json
 import os
@@ -16,7 +17,7 @@ st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 st.markdown("""
 <style>
     .reportview-container {
-        background: url("https://images.unsplash.com/photo-1569154941061-e231b4725ef1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80");
+        background: url("https://images.unsplash.com/photo-1517479149777-5f3b1511d5ad?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80");
         background-size: cover;
     }
     .sidebar .sidebar-content {
@@ -56,11 +57,46 @@ def load_and_preprocess_data(filepath):
         return pd.DataFrame()
 
     try:
-        df = pd.read_csv(filepath, parse_dates=['departure'])
-        df = df[['departure', 'price']]
-        df = df.dropna()
+        # Read CSV with header
+        df = pd.read_csv(filepath, parse_dates=['DepartureDate'])
+        
+        # Rename columns to match our expected format
+        df = df.rename(columns={
+            'DepartureDate': 'departure',
+            'Price': 'price',
+            'Itineraries': 'itineraries',
+            'ValidatingAirlineCodes': 'carriers',
+            'TravelerPricings': 'price_details'
+        })
+        
+        # Convert price to float, replacing any non-numeric values with NaN
+        df['price'] = pd.to_numeric(df['price'], errors='coerce')
+        
+        def extract_price(price_data):
+            try:
+                price_dict = json.loads(price_data.replace("'", "\""))
+                return float(price_dict[0]['price']['total'])
+            except:
+                return np.nan
+        
+        def extract_departure(itinerary_data):
+            try:
+                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
+                return itinerary_dict[0]['segments'][0]['departure']['at']
+            except:
+                return np.nan
+        
+        # Only process these columns if the price column is empty or has issues
+        if df['price'].isnull().all() or df['price'].max() == 'Price':
+            df['price'] = df['price_details'].apply(extract_price)
+            df['departure'] = df['itineraries'].apply(extract_departure)
+        
+        df['departure'] = pd.to_datetime(df['departure'])
+        
+        df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
-        return df
+        
+        return df[['departure', 'price']]
     except Exception as e:
         st.error(f"Error loading data from {filepath}: {str(e)}")
         return pd.DataFrame()
@@ -129,8 +165,16 @@ def predict_prices(model, start_date, end_date):
     return future_df
 
 def plot_prices(df, title):
-    st.line_chart(df.set_index('departure')['predicted_price'], use_container_width=True)
-    st.write(title)
+    plt.figure(figsize=(12, 6))
+    plt.plot(df['departure'], df['predicted_price'], marker='o', color='#4F8BF9')
+    plt.title(title, color='white', fontsize=16)
+    plt.xlabel('Departure Date', color='white')
+    plt.ylabel('Predicted Price (USD)', color='white')
+    plt.grid(True, color='gray', linestyle='--', alpha=0.7)
+    plt.tick_params(colors='white')
+    plt.gca().set_facecolor('none')
+    plt.gcf().set_facecolor('none')
+    st.pyplot(plt)
 
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
