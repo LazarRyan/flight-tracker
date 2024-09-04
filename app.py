@@ -91,7 +91,6 @@ def load_and_preprocess_data(filepath):
         df['departure'] = pd.to_datetime(df['departure'])
         df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
-        df['price'] = df['price'].apply(format_price)
         
         return df[['departure', 'price']]
     except Exception as e:
@@ -129,7 +128,7 @@ def process_and_combine_data(api_data, existing_data):
     for offer in api_data:
         price = float(offer['price']['total'])
         departure = offer['itineraries'][0]['segments'][0]['departure']['at']
-        new_data.append({'departure': departure, 'price': format_price(price)})
+        new_data.append({'departure': departure, 'price': price})
     
     new_df = pd.DataFrame(new_data)
     new_df['departure'] = pd.to_datetime(new_df['departure'])
@@ -141,7 +140,6 @@ def process_and_combine_data(api_data, existing_data):
     return combined_df
 
 def engineer_features(df):
-    df['price'] = df['price'].str.replace('$', '').str.replace(',', '').astype(float)
     df['day_of_week'] = df['departure'].dt.dayofweek
     df['month'] = df['departure'].dt.month
     df['days_to_flight'] = (df['departure'] - datetime.now()).dt.days
