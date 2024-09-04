@@ -84,31 +84,69 @@ def load_and_preprocess_data(filepath):
             except:
                 return np.nan
         
+        def extract_origin(itinerary_data):
+            try:
+                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
+                return itinerary_dict[0]['segments'][0]['departure']['iataCode']
+            except:
+                return np.nan
+        
+        def extract_destination(itinerary_data):
+            try:
+                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
+                return itinerary_dict[0]['segments'][-1]['arrival']['iataCode']
+            except:
+                return np.nan
+        
         if df['price'].isnull().all() or df['price'].max() == 'Price':
             df['price'] = df['price_details'].apply(extract_price)
             df['departure'] = df['itineraries'].apply(extract_departure)
+            df['origin'] = df['itineraries'].apply(extract_origin)
+            df['destination'] = df['itineraries'].apply(extract_destination)
         
         df['departure'] = pd.to_datetime(df['departure'])
-        df = df.dropna(subset=['price', 'departure'])
+        df = df.dropna(subset=['price', 'departure', 'origin', 'destination'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
         
-        return df
+        return df[['departure', 'price', 'origin', 'destination']]
     except Exception as e:
         st.error(f"Error loading data from {filepath}: {str(e)}")
         return pd.DataFrame()
 
-def should_call_api():
-    cache_file = "last_api_call.txt"
+def should_call_api(origin, destination):
+    cache_file = "api_calls.json"
+    today = datetime.now().date().isoformat()
+    
     if os.path.exists(cache_file):
         with open(cache_file, "r") as f:
-            last_call = datetime.fromisoformat(f.read().strip())
-        if datetime.now() - last_call < timedelta(days=1):
-            return False
+            api_calls = json.load(f)
+    else:
+        api_calls = {}
+    
+    route_key = f"{origin}-{destination}"
+    
+    if today in api_calls and route_key in api_calls[today]:
+        return False
     return True
 
-def update_api_call_time():
-    with open("last_api_call.txt", "w") as f:
-        f.write(datetime.now().isoformat())
+def update_api_call_time(origin, destination):
+    cache_file = "api_calls.json"
+    today = datetime.now().date().isoformat()
+    
+    if os.path.exists(cache_file):
+        with open(cache_file, "r") as f:
+            api_calls = json.load(f)
+    else:
+        api_calls = {}
+    
+    if today not in api_calls:
+        api_calls[today] = {}
+    
+    route_key = f"{origin}-{destination}"
+    api_calls[today][route_key] = datetime.now().isoformat()
+    
+    with open(cache_file, "w") as f:
+        json.dump(api_calls, f)
 
 def get_flight_offers(origin, destination, departure_date):
     try:
@@ -212,23 +250,21 @@ def main():
             else:
                 st.success(f"✅ Loaded {len(all_data)} records from existing data.")
             
-            # Filter data for the specific route
             route_data = all_data[(all_data['origin'] == origin) & (all_data['destination'] == destination)]
             
-            if should_call_api():
+            if should_call_api(origin, destination):
                 api_data = get_flight_offers(origin, destination, target_date)
                 if api_data:
                     st.success("✅ Successfully fetched new data from Amadeus API")
                     all_data = process_and_combine_data(api_data, all_data, origin, destination)
                     all_data.to_csv("flight_prices.csv", index=False)
                     st.success("💾 Updated data saved to flight_prices.csv")
-                    update_api_call_time()
-                    # Update route_data with new data
+                    update_api_call_time(origin, destination)
                     route_data = all_data[(all_data['origin'] == origin) & (all_data['destination'] == destination)]
                 else:
                     st.warning("⚠️ No new data fetched from API. Using existing data.")
             else:
-                st.info("ℹ️ Using cached data. API call limit reached for today.")
+                st.info("ℹ️ Using cached data. API call limit reached for this route today.")
             
             if not route_data.empty:
                 st.write(f"📊 Total records for analysis: {len(route_data)}")
