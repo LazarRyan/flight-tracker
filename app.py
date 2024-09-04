@@ -74,41 +74,6 @@ def load_and_preprocess_data(master_filepath, route_filepath, origin, destinatio
     
     return master_df, route_df
 
-def should_call_api(origin, destination):
-    cache_file = "api_calls.json"
-    today = datetime.now().date().isoformat()
-    
-    if os.path.exists(cache_file):
-        with open(cache_file, "r") as f:
-            api_calls = json.load(f)
-    else:
-        api_calls = {}
-    
-    route_key = f"{origin}-{destination}"
-    
-    if today in api_calls and route_key in api_calls[today]:
-        return False
-    return True
-
-def update_api_call_time(origin, destination):
-    cache_file = "api_calls.json"
-    today = datetime.now().date().isoformat()
-    
-    if os.path.exists(cache_file):
-        with open(cache_file, "r") as f:
-            api_calls = json.load(f)
-    else:
-        api_calls = {}
-    
-    if today not in api_calls:
-        api_calls[today] = {}
-    
-    route_key = f"{origin}-{destination}"
-    api_calls[today][route_key] = datetime.now().isoformat()
-    
-    with open(cache_file, "w") as f:
-        json.dump(api_calls, f)
-
 def get_flight_offers(origin, destination, departure_date):
     try:
         response = amadeus.shopping.flight_offers_search.get(
@@ -219,19 +184,16 @@ def main():
             else:
                 st.success(f"✅ Loaded {len(route_data)} records for {origin} to {destination} from existing data.")
             
-            if should_call_api(origin, destination):
-                api_data = get_flight_offers(origin, destination, target_date)
-                if api_data:
-                    st.success("✅ Successfully fetched new data from Amadeus API")
-                    master_data, route_data = process_and_combine_data(api_data, master_data, route_data, origin, destination)
-                    master_data.to_csv(master_csv_filename, index=False)
-                    route_data.to_csv(route_csv_filename, index=False)
-                    st.success(f"💾 Updated data saved to {master_csv_filename} and {route_csv_filename}")
-                    update_api_call_time(origin, destination)
-                else:
-                    st.warning("⚠️ No new data fetched from API. Using existing data.")
+            # Always attempt to fetch new data from the API
+            api_data = get_flight_offers(origin, destination, target_date)
+            if api_data:
+                st.success("✅ Successfully fetched new data from Amadeus API")
+                master_data, route_data = process_and_combine_data(api_data, master_data, route_data, origin, destination)
+                master_data.to_csv(master_csv_filename, index=False)
+                route_data.to_csv(route_csv_filename, index=False)
+                st.success(f"💾 Updated data saved to {master_csv_filename} and {route_csv_filename}")
             else:
-                st.info("ℹ️ Using cached data. API call limit reached for this route today.")
+                st.warning("⚠️ No new data fetched from API. Using existing data.")
             
             if not route_data.empty:
                 st.write(f"📊 Total records for analysis: {len(route_data)}")
