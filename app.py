@@ -57,10 +57,7 @@ def load_and_preprocess_data(filepath):
         return pd.DataFrame()
 
     try:
-        # Read CSV with header
         df = pd.read_csv(filepath, parse_dates=['DepartureDate'])
-        
-        # Rename columns to match our expected format
         df = df.rename(columns={
             'DepartureDate': 'departure',
             'Price': 'price',
@@ -68,8 +65,6 @@ def load_and_preprocess_data(filepath):
             'ValidatingAirlineCodes': 'carriers',
             'TravelerPricings': 'price_details'
         })
-        
-        # Convert price to float, replacing any non-numeric values with NaN
         df['price'] = pd.to_numeric(df['price'], errors='coerce')
         
         def extract_price(price_data):
@@ -86,13 +81,11 @@ def load_and_preprocess_data(filepath):
             except:
                 return np.nan
         
-        # Only process these columns if the price column is empty or has issues
         if df['price'].isnull().all() or df['price'].max() == 'Price':
             df['price'] = df['price_details'].apply(extract_price)
             df['departure'] = df['itineraries'].apply(extract_departure)
         
         df['departure'] = pd.to_datetime(df['departure'])
-        
         df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
         
@@ -100,6 +93,19 @@ def load_and_preprocess_data(filepath):
     except Exception as e:
         st.error(f"Error loading data from {filepath}: {str(e)}")
         return pd.DataFrame()
+
+def should_call_api():
+    cache_file = "last_api_call.txt"
+    if os.path.exists(cache_file):
+        with open(cache_file, "r") as f:
+            last_call = datetime.fromisoformat(f.read().strip())
+        if datetime.now() - last_call < timedelta(days=1):
+            return False
+    return True
+
+def update_api_call_time():
+    with open("last_api_call.txt", "w") as f:
+        f.write(datetime.now().isoformat())
 
 def get_flight_offers(origin, destination, departure_date):
     try:
@@ -198,15 +204,19 @@ def main():
             else:
                 st.success(f"✅ Loaded {len(existing_data)} records from existing data.")
             
-            api_data = get_flight_offers(origin, destination, target_date)
-            
-            if api_data:
-                st.success("✅ Successfully fetched new data from Amadeus API")
-                combined_data = process_and_combine_data(api_data, existing_data)
-                combined_data.to_csv("flight_prices.csv", index=False)
-                st.success("💾 Updated data saved to flight_prices.csv")
+            if should_call_api():
+                api_data = get_flight_offers(origin, destination, target_date)
+                if api_data:
+                    st.success("✅ Successfully fetched new data from Amadeus API")
+                    combined_data = process_and_combine_data(api_data, existing_data)
+                    combined_data.to_csv("flight_prices.csv", index=False)
+                    st.success("💾 Updated data saved to flight_prices.csv")
+                    update_api_call_time()
+                else:
+                    st.warning("⚠️ No new data fetched from API. Using existing data.")
+                    combined_data = existing_data
             else:
-                st.warning("⚠️ No new data fetched from API. Using existing data.")
+                st.info("ℹ️ Using cached data. API call limit reached for today.")
                 combined_data = existing_data
             
             if not combined_data.empty:
