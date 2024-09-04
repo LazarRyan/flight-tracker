@@ -9,6 +9,10 @@ from datetime import datetime, timedelta
 import os
 import json
 from amadeus import Client, ResponseError
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 # Amadeus API configuration
 AMADEUS_CLIENT_ID = st.secrets["AMADEUS_CLIENT_ID"]
@@ -19,7 +23,12 @@ amadeus = Client(
     client_secret=AMADEUS_CLIENT_SECRET
 )
 
-# Function to load data
+def safe_float(x):
+    try:
+        return float(x)
+    except (ValueError, TypeError):
+        return np.nan
+
 def load_data(filepath):
     if os.path.exists(filepath):
         df = pd.read_csv(filepath, header=None, names=['date', 'price', 'itineraries', 'carriers', 'price_details'])
@@ -27,7 +36,8 @@ def load_data(filepath):
         # Convert date string to datetime more explicitly
         df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
         
-        df['price'] = df['price'].astype(float)
+        # Safely convert price to float
+        df['price'] = df['price'].apply(safe_float)
         
         # Safely parse JSON and list strings
         df['itineraries'] = df['itineraries'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
@@ -38,15 +48,17 @@ def load_data(filepath):
         def extract_departure(itinerary):
             try:
                 return datetime.fromisoformat(itinerary[0]['segments'][0]['departure']['at'])
-            except (IndexError, KeyError, ValueError):
+            except (IndexError, KeyError, ValueError, TypeError):
                 return pd.NaT
 
         df['departure'] = df['itineraries'].apply(extract_departure)
         
+        # Remove rows with NaN prices
+        df = df.dropna(subset=['price'])
+        
         return df
     return pd.DataFrame(columns=['date', 'price', 'itineraries', 'carriers', 'price_details', 'departure'])
 
-# Function to get flight offers with error handling
 def get_flight_offers(origin, destination, departure_date):
     try:
         response = amadeus.shopping.flight_offers_search.get(
@@ -60,13 +72,11 @@ def get_flight_offers(origin, destination, departure_date):
         st.warning(f"An error occurred while fetching data: {error}")
         return []
 
-# Function to extract price from flight offers
 def extract_price(offers):
     if offers:
         return min(float(offer['price']['total']) for offer in offers)
     return None
 
-# Function to collect new price data with fallback
 def collect_new_data(origin, destination, start_date, end_date, existing_data):
     date_range = pd.date_range(start=start_date, end=end_date)
     new_data = []
@@ -98,7 +108,6 @@ def collect_new_data(origin, destination, start_date, end_date, existing_data):
     new_df = pd.DataFrame(new_data)
     return pd.concat([existing_data, new_df], ignore_index=True).sort_values('date')
 
-# Function to preprocess data
 def preprocess_data(df):
     df['DayOfWeek'] = df['departure'].dt.dayofweek
     df['Month'] = df['departure'].dt.month
@@ -107,7 +116,6 @@ def preprocess_data(df):
     df['IsHoliday'] = ((df['Month'] == 12) & (df['departure'].dt.day >= 20)).astype(int)
     return df
 
-# Function to train model
 def train_model(df):
     X = df[['DayOfWeek', 'Month', 'DaysToFlight', 'IsWeekend', 'IsHoliday']]
     y = df['price']
@@ -129,17 +137,14 @@ def train_model(df):
     
     return model
 
-# Function to predict future prices
 def predict_future_prices(model, future_df):
     X_future = future_df[['DayOfWeek', 'Month', 'DaysToFlight', 'IsWeekend', 'IsHoliday']]
     future_df['PredictedPrice'] = model.predict(X_future)
     return future_df
 
-# Function to find best days to buy
 def find_best_days_to_buy(future_df, n=5):
     return future_df.nsmallest(n, 'PredictedPrice')
 
-# Function to plot price predictions
 def plot_price_predictions(future_df, best_days):
     plt.figure(figsize=(12, 6))
     plt.plot(future_df['departure'], future_df['PredictedPrice'], marker='', linewidth=2)
@@ -154,13 +159,11 @@ def plot_price_predictions(future_df, best_days):
                      textcoords="offset points", xytext=(0,10), ha='center')
     st.pyplot(plt)
 
-# Function to display countdown
 def display_countdown(target_date):
     today = datetime.now().date()
     days_left = (target_date - today).days
     st.metric(label=f"Days until {target_date.strftime('%B %d, %Y')}", value=days_left)
 
-# Streamlit app
 def main():
     st.title("Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
@@ -175,48 +178,52 @@ def main():
     historical_data_path = "flight_prices.csv"
     
     if st.button("Update Data and Predict"):
-        # Load existing data
-        existing_data = load_data(historical_data_path)
-        
-        if existing_data.empty:
-            st.warning(f"No existing data found in {historical_data_path}. Will attempt to collect new data.")
-        
-        # Collect new data (limited to 2 API calls)
-        st.write("Collecting new data...")
-        updated_data = collect_new_data(origin, destination, datetime.now().date(), target_date, existing_data)
-        
-        # Save updated data only if new data was added
-        if len(updated_data) > len(existing_data):
-            updated_data.to_csv(historical_data_path, index=False, header=False)
-            st.success(f"New data added and saved to {historical_data_path}.")
-        else:
-            st.info("No new data added. Using existing historical data.")
-        
-        if not updated_data.empty and not updated_data['price'].isnull().all():
-            # Preprocess and train model
-            st.write("Training model...")
-            df = preprocess_data(updated_data)
-            model = train_model(df)
+        try:
+            # Load existing data
+            existing_data = load_data(historical_data_path)
             
-            # Predict future prices
-            st.write("Predicting future prices...")
-            future_dates = pd.date_range(start=datetime.now(), end=target_date)
-            future_df = pd.DataFrame({'departure': future_dates})
-            future_df = preprocess_data(future_df)
-            future_df = predict_future_prices(model, future_df)
-            best_days = find_best_days_to_buy(future_df)
+            if existing_data.empty:
+                st.warning(f"No existing data found in {historical_data_path}. Will attempt to collect new data.")
             
-            # Visualize results
-            st.subheader("Price Prediction Chart")
-            plot_price_predictions(future_df, best_days)
+            # Collect new data (limited to 2 API calls)
+            st.write("Collecting new data...")
+            updated_data = collect_new_data(origin, destination, datetime.now().date(), target_date, existing_data)
             
-            st.subheader("Best Days to Buy Tickets")
-            st.dataframe(best_days[['departure', 'PredictedPrice']].set_index('departure'))
+            # Save updated data only if new data was added
+            if len(updated_data) > len(existing_data):
+                updated_data.to_csv(historical_data_path, index=False, header=False)
+                st.success(f"New data added and saved to {historical_data_path}.")
+            else:
+                st.info("No new data added. Using existing historical data.")
             
-            st.subheader("All Predicted Prices")
-            st.dataframe(future_df[['departure', 'PredictedPrice']].set_index('departure'))
-        else:
-            st.error("No valid price data available for predictions. Please check your data source.")
+            if not updated_data.empty and not updated_data['price'].isnull().all():
+                # Preprocess and train model
+                st.write("Training model...")
+                df = preprocess_data(updated_data)
+                model = train_model(df)
+                
+                # Predict future prices
+                st.write("Predicting future prices...")
+                future_dates = pd.date_range(start=datetime.now(), end=target_date)
+                future_df = pd.DataFrame({'departure': future_dates})
+                future_df = preprocess_data(future_df)
+                future_df = predict_future_prices(model, future_df)
+                best_days = find_best_days_to_buy(future_df)
+                
+                # Visualize results
+                st.subheader("Price Prediction Chart")
+                plot_price_predictions(future_df, best_days)
+                
+                st.subheader("Best Days to Buy Tickets")
+                st.dataframe(best_days[['departure', 'PredictedPrice']].set_index('departure'))
+                
+                st.subheader("All Predicted Prices")
+                st.dataframe(future_df[['departure', 'PredictedPrice']].set_index('departure'))
+            else:
+                st.error("No valid price data available for predictions. Please check your data source.")
+        except Exception as e:
+            logging.exception("An error occurred:")
+            st.error(f"An error occurred: {str(e)}")
 
 if __name__ == "__main__":
     main()
