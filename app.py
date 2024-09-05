@@ -64,16 +64,16 @@ try:
 
     gcp_service_account_info = st.secrets["gcp_service_account"]
     
-    # Debug: Print the type and content of gcp_service_account_info
+    # Debug: Print the type of gcp_service_account_info
     st.write("Type of gcp_service_account_info:", type(gcp_service_account_info))
-    st.write("Content of gcp_service_account_info:", gcp_service_account_info)
 
-    # Check if gcp_service_account_info is a dictionary
-    if not isinstance(gcp_service_account_info, dict):
-        st.error("gcp_service_account_info is not a dictionary")
-        st.stop()
+    # Convert AttrDict to a regular dictionary
+    gcp_service_account_dict = gcp_service_account_info.to_dict()
 
-    credentials = service_account.Credentials.from_service_account_info(gcp_service_account_info)
+    # Debug: Print the content of gcp_service_account_dict (be careful not to expose sensitive info)
+    st.write("Keys in gcp_service_account_dict:", list(gcp_service_account_dict.keys()))
+
+    credentials = service_account.Credentials.from_service_account_info(gcp_service_account_dict)
     storage_client = storage.Client(credentials=credentials)
     
     if "gcs_bucket_name" not in st.secrets:
