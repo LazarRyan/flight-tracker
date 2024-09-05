@@ -74,15 +74,27 @@ def save_data_to_gcs(df, origin, destination):
     blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
 
 def should_call_api(origin, destination):
-    blob = bucket.blob(f"last_api_call_{origin}_{destination}.txt")
+    blob = bucket.blob(f"api_calls_{origin}_{destination}.txt")
     if blob.exists():
-        last_call = datetime.fromisoformat(blob.download_as_text().strip())
-        return datetime.now() - last_call >= timedelta(hours=24)
+        content = blob.download_as_text().strip().split('\n')
+        current_date = datetime.now().date().isoformat()
+        calls_today = sum(1 for call in content if call.startswith(current_date))
+        return calls_today < 2
     return True
 
 def update_api_call_time(origin, destination):
-    blob = bucket.blob(f"last_api_call_{origin}_{destination}.txt")
-    blob.upload_from_string(datetime.now().isoformat())
+    blob = bucket.blob(f"api_calls_{origin}_{destination}.txt")
+    current_date = datetime.now().date().isoformat()
+    if blob.exists():
+        content = blob.download_as_text().strip().split('\n')
+        # Keep only today's calls
+        content = [line for line in content if line.startswith(current_date)]
+    else:
+        content = []
+    
+    content.append(f"{current_date}_{datetime.now().isoformat()}")
+    blob.upload_from_string('\n'.join(content))
+
 
 @st.cache_data
 def get_flight_offers(origin, destination, year, month):
@@ -222,49 +234,64 @@ def main():
             existing_data = load_data_from_gcs(origin, destination)
 
             if existing_data.empty:
-                st.info("⚠️ No existing data found. Fetching new data from API.")
+                st.info("⚠️ No existing data found for this route. Fetching new data from API.")
             else:
-                st.success(f"✅ Loaded {len(existing_data)} records for {origin} to {destination} from GCS.")
+                st.success(f"✅ Loaded {len(existing_data)} existing records for {origin} to {destination}.")
 
-            if should_call_api(origin, destination):
-                with st.spinner("Fetching new data from Amadeus API. This may take a few minutes..."):
+            api_calls_made = 0
+            while should_call_api(origin, destination) and api_calls_made < 2:
+                with st.spinner(f"Fetching new data from Amadeus API (Call {api_calls_made + 1}/2). This may take a few minutes..."):
                     api_data = fetch_data_for_months(origin, destination)
                 if api_data:
-                    combined_data = process_and_combine_data(api_data, existing_data, origin, destination)
-                    save_data_to_gcs(combined_data, origin, destination)
+                    new_data = process_and_combine_data(api_data, existing_data, origin, destination)
+                    save_data_to_gcs(new_data, origin, destination)
                     update_api_call_time(origin, destination)
+                    existing_data = new_data
+                    api_calls_made += 1
+                    st.success(f"✅ Successfully fetched and processed new data (Call {api_calls_made}/2).")
                 else:
-                    st.warning("⚠️ No new data fetched from API. Using existing data.")
-                    combined_data = existing_data
-            else:
-                st.info(f"ℹ️ Using cached data for {origin} to {destination}. API call limit reached for this route today.")
-                combined_data = existing_data
+                    st.warning(f"⚠️ No new data fetched from API on call {api_calls_made + 1}.")
+                    break
 
-            if not combined_data.empty:
-                st.success(f"📊 Total records for analysis: {len(combined_data)}")
+            if api_calls_made == 0:
+                st.info(f"ℹ️ Using existing data for {origin} to {destination}. API call limit reached for this route today.")
 
-                df = engineer_features(combined_data)
+            if not existing_data.empty:
+                st.success(f"📊 Total records for analysis: {len(existing_data)}")
+
+                with st.expander("View Sample Data"):
+                    st.dataframe(existing_data.head())
+
+                df = engineer_features(existing_data)
                 model, train_mae, test_mae = train_model(df)
 
                 st.info(f"🤖 Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
 
                 start_date = datetime.now().date()
                 end_date = target_date + timedelta(days=30)
-                all_origins = combined_data['origin'].unique()
-                all_destinations = combined_data['destination'].unique()
+                all_origins = existing_data['origin'].unique()
+                all_destinations = existing_data['destination'].unique()
                 future_prices = predict_prices(model, start_date, end_date, origin, destination, all_origins, all_destinations)
 
                 st.subheader("📈 Predicted Prices")
-                st.plotly_chart(plot_prices(future_prices, "Predicted Flight Prices"), use_container_width=True)
+                fig = plot_prices(future_prices, f"Predicted Flight Prices ({origin} to {destination})")
+                st.plotly_chart(fig, use_container_width=True)
 
                 best_days = future_prices.nsmallest(5, 'predicted_price')
                 st.subheader("💰 Best Days to Buy Tickets")
-                st.table(best_days[['departure', 'predicted_price']].set_index('departure').rename(columns={'predicted_price': 'Predicted Price'}))
+                st.table(best_days[['departure', 'predicted_price']].set_index('departure').rename(columns={'predicted_price': 'Predicted Price ($)'}))
 
-                days_left = (target_date - datetime.now().date()).days
-                st.metric(label=f"⏳ Days until {target_date}", value=days_left)
+                days_until_target = (target_date - datetime.now().date()).days
+                st.metric(label=f"⏳ Days until target date ({target_date})", value=days_until_target)
+
+                avg_price = future_prices['predicted_price'].mean()
+                st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
+
+                price_range = future_prices['predicted_price'].max() - future_prices['predicted_price'].min()
+                st.metric(label="📊 Price Range", value=f"${price_range:.2f}")
+
             else:
-                st.error("❌ No data available for prediction. Please try again with a different date or check your data source.")
+                st.error("❌ No data available for prediction. Please try again with a different route or check your data source.")
 
 if __name__ == "__main__":
     main()
