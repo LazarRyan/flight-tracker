@@ -77,15 +77,25 @@ except Exception as e:
 try:
     st.write("Attempting to initialize Google Cloud Storage...")
     
-    if "gcp_service_account" not in st.secrets:
-        st.error("gcp_service_account not found in secrets")
-        st.stop()
-    
-    if "gcs_bucket_name" not in st.secrets:
+    # Try to get bucket_name from top-level secrets first
+    if "gcs_bucket_name" in st.secrets:
+        bucket_name = st.secrets["gcs_bucket_name"]
+    # If not found, check if it's nested under 'gcp'
+    elif "gcp" in st.secrets and "bucket_name" in st.secrets["gcp"]:
+        bucket_name = st.secrets["gcp"]["bucket_name"]
+    else:
         st.error("gcs_bucket_name not found in secrets")
         st.stop()
     
-    st.write("Service account info and bucket name found in secrets.")
+    st.write(f"Bucket name from secrets: {bucket_name}")
+    
+    if not isinstance(bucket_name, str):
+        st.error(f"Invalid bucket name: {bucket_name}. Expected a string.")
+        st.stop()
+    
+    if not bucket_name:
+        st.error("Bucket name is empty")
+        st.stop()
     
     gcp_service_account_info = st.secrets["gcp_service_account"]
     st.write(f"Type of gcp_service_account_info: {type(gcp_service_account_info)}")
