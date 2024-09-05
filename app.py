@@ -136,11 +136,15 @@ def process_and_combine_data(api_data, existing_data):
     new_df = pd.DataFrame(new_data)
     new_df['departure'] = pd.to_datetime(new_df['departure'])
     
+    st.info(f"New data fetched: {len(new_df)} records")
+    
     # Combine new data with existing data
     combined_df = pd.concat([existing_data, new_df], ignore_index=True)
+    st.info(f"Combined data (before processing): {len(combined_df)} records")
     
     # Remove duplicates, keeping the latest data for each date
     combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure'], keep='last')
+    st.info(f"After removing duplicates: {len(combined_df)} records")
     
     # Sort the dataframe by departure date
     combined_df = combined_df.sort_values('departure')
@@ -151,6 +155,7 @@ def process_and_combine_data(api_data, existing_data):
         (combined_df['departure'] >= cutoff_date) | 
         (combined_df['departure'] >= datetime.now())
     ]
+    st.info(f"Final combined data: {len(combined_df)} records")
     
     return combined_df
 
@@ -245,9 +250,15 @@ def main():
                 if api_data:
                     st.success(f"✅ Successfully fetched {len(api_data)} new records from Amadeus API")
                     combined_data = process_and_combine_data(api_data, existing_data)
-                    st.info(f"Total records after combining and processing: {len(combined_data)}")
+                    
+                    # Save the combined data
                     combined_data.to_csv("flight_prices.csv", index=False)
-                    st.success("💾 Updated data saved to flight_prices.csv")
+                    st.success(f"💾 Updated data saved to flight_prices.csv ({len(combined_data)} records)")
+                    
+                    # Verify the saved data
+                    verified_data = load_and_preprocess_data("flight_prices.csv")
+                    st.info(f"Verified saved data: {len(verified_data)} records")
+                    
                     update_api_call_time(origin, destination)
                 else:
                     st.warning("⚠️ No new data fetched from API. Using existing data.")
