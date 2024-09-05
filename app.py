@@ -9,11 +9,12 @@ from datetime import datetime, timedelta
 import json
 import os
 from amadeus import Client, ResponseError
+import time
 
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS
+# Custom CSS (unchanged)
 st.markdown("""
 <style>
     .reportview-container {
@@ -43,66 +44,39 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Amadeus API configuration
-AMADEUS_CLIENT_ID = st.secrets["AMADEUS_CLIENT_ID"]
-AMADEUS_CLIENT_SECRET = st.secrets["AMADEUS_CLIENT_SECRET"]
-
-amadeus = Client(
-    client_id=AMADEUS_CLIENT_ID,
-    client_secret=AMADEUS_CLIENT_SECRET
-)
+try:
+    AMADEUS_CLIENT_ID = st.secrets["AMADEUS_CLIENT_ID"]
+    AMADEUS_CLIENT_SECRET = st.secrets["AMADEUS_CLIENT_SECRET"]
+    amadeus = Client(client_id=AMADEUS_CLIENT_ID, client_secret=AMADEUS_CLIENT_SECRET)
+    st.success("Amadeus client initialized successfully")
+except Exception as e:
+    st.error(f"Error initializing Amadeus client: {e}")
+    st.stop()
 
 def format_price(price):
     return f"${price:,.2f}"
 
 def load_and_preprocess_data(filepath):
     if not os.path.exists(filepath):
-        st.error(f"File not found: {filepath}")
-        return pd.DataFrame()
+        st.warning(f"File not found: {filepath}. Starting with empty dataset.")
+        return pd.DataFrame(columns=['departure', 'price'])
 
     try:
-        df = pd.read_csv(filepath, parse_dates=['DepartureDate'])
-        df = df.rename(columns={
-            'DepartureDate': 'departure',
-            'Price': 'price',
-            'Itineraries': 'itineraries',
-            'ValidatingAirlineCodes': 'carriers',
-            'TravelerPricings': 'price_details'
-        })
+        df = pd.read_csv(filepath, parse_dates=['departure'])
         df['price'] = pd.to_numeric(df['price'], errors='coerce')
-        
-        def extract_price(price_data):
-            try:
-                price_dict = json.loads(price_data.replace("'", "\""))
-                return float(price_dict[0]['price']['total'])
-            except:
-                return np.nan
-        
-        def extract_departure(itinerary_data):
-            try:
-                itinerary_dict = json.loads(itinerary_data.replace("'", "\""))
-                return itinerary_dict[0]['segments'][0]['departure']['at']
-            except:
-                return np.nan
-        
-        if df['price'].isnull().all() or df['price'].max() == 'Price':
-            df['price'] = df['price_details'].apply(extract_price)
-            df['departure'] = df['itineraries'].apply(extract_departure)
-        
-        df['departure'] = pd.to_datetime(df['departure'])
         df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
-        
         return df[['departure', 'price']]
     except Exception as e:
         st.error(f"Error loading data from {filepath}: {str(e)}")
-        return pd.DataFrame()
+        return pd.DataFrame(columns=['departure', 'price'])
 
 def should_call_api():
     cache_file = "last_api_call.txt"
     if os.path.exists(cache_file):
         with open(cache_file, "r") as f:
             last_call = datetime.fromisoformat(f.read().strip())
-        if datetime.now() - last_call < timedelta(days=1):
+        if datetime.now() - last_call < timedelta(hours=1):  # Changed to hourly limit
             return False
     return True
 
@@ -111,17 +85,29 @@ def update_api_call_time():
         f.write(datetime.now().isoformat())
 
 def get_flight_offers(origin, destination, departure_date):
-    try:
-        response = amadeus.shopping.flight_offers_search.get(
-            originLocationCode=origin,
-            destinationLocationCode=destination,
-            departureDate=departure_date.strftime("%Y-%m-%d"),
-            adults=1
-        )
-        return response.data
-    except ResponseError as error:
-        st.error(f"Error fetching data from Amadeus API: {error}")
-        return []
+    retries = 3
+    for attempt in range(retries):
+        try:
+            response = amadeus.shopping.flight_offers_search.get(
+                originLocationCode=origin,
+                destinationLocationCode=destination,
+                departureDate=departure_date.strftime("%Y-%m-%d"),
+                adults=1,
+                max=5  # Limit to 5 results
+            )
+            return response.data
+        except ResponseError as error:
+            st.error(f"Error fetching data from Amadeus API: {error}")
+            st.error(f"Error details: {error.response.body}")
+            if attempt < retries - 1:
+                st.warning(f"Retrying in 5 seconds... (Attempt {attempt + 2}/{retries})")
+                time.sleep(5)
+            else:
+                st.error("Max retries reached. Please try again later.")
+                return []
+        except Exception as e:
+            st.error(f"Unexpected error: {e}")
+            return []
 
 def process_and_combine_data(api_data, existing_data):
     new_data = []
@@ -190,6 +176,15 @@ def plot_prices(df, title):
     
     st.pyplot(fig)
 
+def validate_input(origin, destination, target_date):
+    if len(origin) != 3 or len(destination) != 3:
+        st.error("Origin and destination must be 3-letter IATA airport codes.")
+        return False
+    if target_date <= datetime.now().date():
+        st.error("Target date must be in the future.")
+        return False
+    return True
+
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
@@ -197,13 +192,16 @@ def main():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        origin = st.text_input("🛫 Origin Airport Code", "JFK")
+        origin = st.text_input("🛫 Origin Airport Code", "JFK").upper()
     with col2:
-        destination = st.text_input("🛬 Destination Airport Code", "FCO")
+        destination = st.text_input("🛬 Destination Airport Code", "FCO").upper()
     with col3:
         target_date = st.date_input("🗓️ Target Flight Date", value=datetime(2025, 9, 10))
     
     if st.button("🔍 Predict Prices"):
+        if not validate_input(origin, destination, target_date):
+            return
+
         with st.spinner("Loading data and making predictions..."):
             existing_data = load_and_preprocess_data("flight_prices.csv")
             
