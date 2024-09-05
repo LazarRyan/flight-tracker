@@ -11,9 +11,29 @@ import random
 from google.cloud import storage
 from io import StringIO
 from google.oauth2 import service_account
+import traceback
 
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
+
+# Debug: Print all keys in st.secrets
+st.write("Keys in st.secrets:", list(st.secrets.keys()))
+
+# Debug: Print the type and structure of gcp_service_account
+if "gcp_service_account" in st.secrets:
+    st.write("Type of gcp_service_account:", type(st.secrets["gcp_service_account"]))
+    if isinstance(st.secrets["gcp_service_account"], dict):
+        st.write("Keys in gcp_service_account:", list(st.secrets["gcp_service_account"].keys()))
+    else:
+        st.write("gcp_service_account is not a dictionary")
+else:
+    st.write("gcp_service_account not found in secrets")
+
+# Debug: Print the value of gcs_bucket_name
+if "gcs_bucket_name" in st.secrets:
+    st.write("gcs_bucket_name:", st.secrets["gcs_bucket_name"])
+else:
+    st.write("gcs_bucket_name not found in secrets")
 
 # Custom CSS
 st.markdown("""
@@ -55,15 +75,41 @@ except Exception as e:
 
 # Google Cloud Storage configuration
 try:
-    credentials = service_account.Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"]
-    )
+    st.write("Attempting to initialize Google Cloud Storage...")
+    
+    if "gcp_service_account" not in st.secrets:
+        st.error("gcp_service_account not found in secrets")
+        st.stop()
+    
+    if "gcs_bucket_name" not in st.secrets:
+        st.error("gcs_bucket_name not found in secrets")
+        st.stop()
+    
+    st.write("Service account info and bucket name found in secrets.")
+    
+    gcp_service_account_info = st.secrets["gcp_service_account"]
+    st.write(f"Type of gcp_service_account_info: {type(gcp_service_account_info)}")
+    st.write(f"Keys in gcp_service_account_info: {gcp_service_account_info.keys()}")
+    
+    credentials = service_account.Credentials.from_service_account_info(gcp_service_account_info)
+    st.write("Credentials created successfully.")
+    
     storage_client = storage.Client(credentials=credentials)
+    st.write("Storage client created successfully.")
+    
     bucket_name = st.secrets["gcs_bucket_name"]
+    st.write(f"Attempting to access bucket: {bucket_name}")
+    
     bucket = storage_client.bucket(bucket_name)
+    st.write("Bucket accessed successfully.")
+    
     st.success("Successfully connected to Google Cloud Storage")
 except Exception as e:
-    st.error(f"Error initializing Google Cloud Storage: {e}")
+    st.error(f"Error initializing Google Cloud Storage: {str(e)}")
+    st.write(f"Error type: {type(e).__name__}")
+    st.write(f"Error args: {e.args}")
+    st.write("Traceback:")
+    st.code(traceback.format_exc())
     st.stop()
 
 def format_price(price):
@@ -294,7 +340,7 @@ def main():
                 st.table(best_days[['departure', 'formatted price']].rename(columns={'formatted price': 'predicted price'}).set_index('departure'))
 
                 days_left = (target_date - datetime.now().date()).days
-                st.metric(label=f"⏳ Days until {target_date}", value=days_left)
+                st.metric(                st.metric(label=f"⏳ Days until {target_date}", value=days_left)
             else:
                 st.error("❌ No data available for prediction. Please try again with a different date or check your data source.")
                 st.stop()
