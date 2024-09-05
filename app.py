@@ -52,20 +52,25 @@ def initialize_clients():
 
 amadeus, bucket = initialize_clients()
 
-def load_data_from_gcs():
-    blob = bucket.blob("flight_prices.csv")
+def get_data_filename(origin, destination):
+    return f"flight_prices_{origin}_{destination}.csv"
+
+def load_data_from_gcs(origin, destination):
+    filename = get_data_filename(origin, destination)
+    blob = bucket.blob(filename)
     try:
         content = blob.download_as_text()
         df = pd.read_csv(StringIO(content))
         df['departure'] = pd.to_datetime(df['departure'])
         return df
     except Exception:
-        return pd.DataFrame(columns=['departure', 'price'])
+        return pd.DataFrame(columns=['departure', 'price', 'origin', 'destination'])
 
-def save_data_to_gcs(df):
+def save_data_to_gcs(df, origin, destination):
+    filename = get_data_filename(origin, destination)
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index=False)
-    blob = bucket.blob("flight_prices.csv")
+    blob = bucket.blob(filename)
     blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
 
 def should_call_api(origin, destination):
@@ -115,17 +120,19 @@ def fetch_data_for_months(origin, destination, num_months=12):
         progress_bar.progress((i + 1) / num_months)
     return all_data
 
-def process_and_combine_data(api_data, existing_data):
+def process_and_combine_data(api_data, existing_data, origin, destination):
     new_data = [
         {'departure': offer['itineraries'][0]['segments'][0]['departure']['at'],
-         'price': float(offer['price']['total'])}
+         'price': float(offer['price']['total']),
+         'origin': origin,
+         'destination': destination}
         for offer in api_data
     ]
     new_df = pd.DataFrame(new_data)
     new_df['departure'] = pd.to_datetime(new_df['departure'])
 
     combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-    combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure'], keep='last')
+    combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
     
     cutoff_date = datetime.now() - timedelta(days=365)
     combined_df = combined_df[
@@ -139,11 +146,12 @@ def engineer_features(df):
     df['month'] = df['departure'].dt.month
     df['days_to_flight'] = (df['departure'] - datetime.now()).dt.days
     df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
+    df = pd.get_dummies(df, columns=['origin', 'destination'], prefix=['origin', 'dest'])
     return df
 
 @st.cache_resource
 def train_model(df):
-    X = df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
+    X = df.drop(['departure', 'price'], axis=1)
     y = df['price']
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -159,12 +167,19 @@ def train_model(df):
 
     return model, train_mae, test_mae
 
-def predict_prices(model, start_date, end_date):
+def predict_prices(model, start_date, end_date, origin, destination, all_origins, all_destinations):
     date_range = pd.date_range(start=start_date, end=end_date)
-    future_df = pd.DataFrame({'departure': date_range})
+    future_df = pd.DataFrame({'departure': date_range, 'origin': origin, 'destination': destination})
     future_df = engineer_features(future_df)
-
-    X_future = future_df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
+    
+    for o in all_origins:
+        if f'origin_{o}' not in future_df.columns:
+            future_df[f'origin_{o}'] = 0
+    for d in all_destinations:
+        if f'dest_{d}' not in future_df.columns:
+            future_df[f'dest_{d}'] = 0
+    
+    X_future = future_df.drop('departure', axis=1)
     future_df['predicted_price'] = model.predict(X_future)
 
     return future_df
@@ -204,19 +219,19 @@ def main():
             return
 
         with st.spinner("Loading data and making predictions..."):
-            existing_data = load_data_from_gcs()
+            existing_data = load_data_from_gcs(origin, destination)
 
             if existing_data.empty:
                 st.info("⚠️ No existing data found. Fetching new data from API.")
             else:
-                st.success(f"✅ Loaded {len(existing_data)} records from existing data in GCS.")
+                st.success(f"✅ Loaded {len(existing_data)} records for {origin} to {destination} from GCS.")
 
             if should_call_api(origin, destination):
                 with st.spinner("Fetching new data from Amadeus API. This may take a few minutes..."):
                     api_data = fetch_data_for_months(origin, destination)
                 if api_data:
-                    combined_data = process_and_combine_data(api_data, existing_data)
-                    save_data_to_gcs(combined_data)
+                    combined_data = process_and_combine_data(api_data, existing_data, origin, destination)
+                    save_data_to_gcs(combined_data, origin, destination)
                     update_api_call_time(origin, destination)
                 else:
                     st.warning("⚠️ No new data fetched from API. Using existing data.")
@@ -235,7 +250,9 @@ def main():
 
                 start_date = datetime.now().date()
                 end_date = target_date + timedelta(days=30)
-                future_prices = predict_prices(model, start_date, end_date)
+                all_origins = combined_data['origin'].unique()
+                all_destinations = combined_data['destination'].unique()
+                future_prices = predict_prices(model, start_date, end_date, origin, destination, all_origins, all_destinations)
 
                 st.subheader("📈 Predicted Prices")
                 st.plotly_chart(plot_prices(future_prices, "Predicted Flight Prices"), use_container_width=True)
