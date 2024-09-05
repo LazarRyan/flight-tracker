@@ -14,7 +14,7 @@ import time
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS (unchanged)
+# Custom CSS
 st.markdown("""
 <style>
     .reportview-container {
@@ -62,7 +62,10 @@ def load_and_preprocess_data(filepath):
         return pd.DataFrame(columns=['departure', 'price'])
 
     try:
-        df = pd.read_csv(filepath, parse_dates=['departure'])
+        df = pd.read_csv(filepath)
+        if 'DepartureDate' in df.columns:
+            df = df.rename(columns={'DepartureDate': 'departure', 'Price': 'price'})
+        df['departure'] = pd.to_datetime(df['departure'], errors='coerce')
         df['price'] = pd.to_numeric(df['price'], errors='coerce')
         df = df.dropna(subset=['price', 'departure'])
         df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
@@ -76,7 +79,7 @@ def should_call_api():
     if os.path.exists(cache_file):
         with open(cache_file, "r") as f:
             last_call = datetime.fromisoformat(f.read().strip())
-        if datetime.now() - last_call < timedelta(hours=1):  # Changed to hourly limit
+        if datetime.now() - last_call < timedelta(hours=1):
             return False
     return True
 
@@ -85,6 +88,11 @@ def update_api_call_time():
         f.write(datetime.now().isoformat())
 
 def get_flight_offers(origin, destination, departure_date):
+    max_date = datetime.now() + timedelta(days=360)
+    if departure_date > max_date.date():
+        st.warning(f"Selected date is too far in the future. Using {max_date.date()} instead.")
+        departure_date = max_date.date()
+    
     retries = 3
     for attempt in range(retries):
         try:
@@ -93,7 +101,7 @@ def get_flight_offers(origin, destination, departure_date):
                 destinationLocationCode=destination,
                 departureDate=departure_date.strftime("%Y-%m-%d"),
                 adults=1,
-                max=5  # Limit to 5 results
+                max=5
             )
             return response.data
         except ResponseError as error:
@@ -253,7 +261,8 @@ def main():
                 days_left = (target_date - datetime.now().date()).days
                 st.metric(label=f"⏳ Days until {target_date}", value=days_left)
             else:
-                st.error("❌ No data available for prediction. Please check your data source or try again later.")
+                st.error("❌ No data available for prediction. Please try again with a different date or check your data source.")
+                st.stop()
 
 if __name__ == "__main__":
     main()
