@@ -55,34 +55,13 @@ except Exception as e:
 
 # Google Cloud Storage configuration
 try:
-    # Debug: Print all keys in st.secrets
-    st.write("Keys in st.secrets:", list(st.secrets.keys()))
-
-    if "gcp_service_account" not in st.secrets:
-        st.error("gcp_service_account not found in secrets")
-        st.stop()
-
-    gcp_service_account_info = st.secrets["gcp_service_account"]
-    
-    # Debug: Print the type of gcp_service_account_info
-    st.write("Type of gcp_service_account_info:", type(gcp_service_account_info))
-
-    # Convert AttrDict to a regular dictionary
-    gcp_service_account_dict = dict(gcp_service_account_info)
-
-    # Debug: Print the keys in gcp_service_account_dict
-    st.write("Keys in gcp_service_account_dict:", list(gcp_service_account_dict.keys()))
-
-    credentials = service_account.Credentials.from_service_account_info(gcp_service_account_dict)
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"]
+    )
     storage_client = storage.Client(credentials=credentials)
-    
-    if "gcs_bucket_name" not in st.secrets:
-        st.error("gcs_bucket_name not found in secrets")
-        st.stop()
-
     bucket_name = st.secrets["gcs_bucket_name"]
     bucket = storage_client.bucket(bucket_name)
-
+    st.success("Successfully connected to Google Cloud Storage")
 except Exception as e:
     st.error(f"Error initializing Google Cloud Storage: {e}")
     st.stop()
