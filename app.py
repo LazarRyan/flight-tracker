@@ -109,7 +109,6 @@ def get_flight_offers(origin, destination, year, month):
                 max=1
             )
             all_offers.extend(response.data)
-            st.success(f"Fetched data for {current_date.date()}")
         except ResponseError as error:
             st.error(f"Error fetching data for {current_date.date()}: {error}")
     
@@ -124,6 +123,7 @@ def fetch_data_for_months(origin, destination, num_months=12):
         all_data.extend(month_data)
         current_date = (current_date + timedelta(days=32)).replace(day=1)
         progress_bar.progress((i + 1) / num_months)
+    st.success(f"✅ Fetched data for {num_months} months")
     return all_data
 
 def process_and_combine_data(api_data, existing_data):
@@ -138,18 +138,14 @@ def process_and_combine_data(api_data, existing_data):
     
     st.info(f"New data fetched: {len(new_df)} records")
     
-    # Combine new data with existing data
     combined_df = pd.concat([existing_data, new_df], ignore_index=True)
     st.info(f"Combined data (before processing): {len(combined_df)} records")
     
-    # Remove duplicates, keeping the latest data for each date
     combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure'], keep='last')
     st.info(f"After removing duplicates: {len(combined_df)} records")
     
-    # Sort the dataframe by departure date
     combined_df = combined_df.sort_values('departure')
     
-    # Keep only the last 365 days of historical data and all future data
     cutoff_date = datetime.now() - timedelta(days=365)
     combined_df = combined_df[
         (combined_df['departure'] >= cutoff_date) | 
@@ -248,14 +244,12 @@ def main():
                 st.info("Fetching new data from Amadeus API. This may take a few minutes...")
                 api_data = fetch_data_for_months(origin, destination)
                 if api_data:
-                    st.success(f"✅ Successfully fetched {len(api_data)} new records from Amadeus API")
+                    st.success(f"✅ Successfully fetched new data from Amadeus API")
                     combined_data = process_and_combine_data(api_data, existing_data)
                     
-                    # Save the combined data
                     combined_data.to_csv("flight_prices.csv", index=False)
                     st.success(f"💾 Updated data saved to flight_prices.csv ({len(combined_data)} records)")
                     
-                    # Verify the saved data
                     verified_data = load_and_preprocess_data("flight_prices.csv")
                     st.info(f"Verified saved data: {len(verified_data)} records")
                     
