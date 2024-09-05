@@ -328,7 +328,8 @@ def main():
             if trip_type == "round-trip":
                 api_calls_made = 0
                 while should_call_api(destination, origin) and api_calls_made < 2:
-                    with st.spinner(f"Fetching new data for return flights (Call {api_return_api_data = fetch_data_for_months(destination, origin, return_date, return_date + timedelta(days=30), "one-way")
+                    with st.spinner(f"Fetching new data for return flights (Call {api_calls_made + 1}/2)..."):
+                        return_api_data = fetch_data_for_months(destination, origin, return_date, return_date + timedelta(days=30), "one-way")
                     if return_api_data:
                         return_new_data = process_and_combine_data(return_api_data, existing_data, destination, origin, "one-way")
                         save_data_to_gcs(return_new_data, destination, origin, "one-way")
