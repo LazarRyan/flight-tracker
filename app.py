@@ -11,6 +11,8 @@ import os
 from amadeus import Client, ResponseError
 import time
 import random
+from google.cloud import storage
+from io import StringIO
 
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
@@ -53,40 +55,46 @@ except Exception as e:
     st.error(f"Error initializing Amadeus client: {e}")
     st.stop()
 
+# Google Cloud Storage configuration
+try:
+    storage_client = storage.Client.from_service_account_info(st.secrets["gcp_service_account"])
+    bucket_name = st.secrets["gcs_bucket_name"]
+    bucket = storage_client.bucket(bucket_name)
+except Exception as e:
+    st.error(f"Error initializing Google Cloud Storage: {e}")
+    st.stop()
+
 def format_price(price):
     return f"${price:,.2f}"
 
-def load_and_preprocess_data(filepath):
-    if not os.path.exists(filepath):
-        st.warning(f"File not found: {filepath}. Starting with empty dataset.")
+def load_data_from_gcs():
+    blob = bucket.blob("flight_prices.csv")
+    try:
+        content = blob.download_as_text()
+        df = pd.read_csv(StringIO(content))
+        df['departure'] = pd.to_datetime(df['departure'])
+        return df
+    except Exception as e:
+        st.warning(f"Error loading data from GCS: {e}. Starting with empty dataset.")
         return pd.DataFrame(columns=['departure', 'price'])
 
-    try:
-        df = pd.read_csv(filepath)
-        if 'DepartureDate' in df.columns:
-            df = df.rename(columns={'DepartureDate': 'departure', 'Price': 'price'})
-        df['departure'] = pd.to_datetime(df['departure'], errors='coerce')
-        df['price'] = pd.to_numeric(df['price'], errors='coerce')
-        df = df.dropna(subset=['price', 'departure'])
-        df = df[(df['price'] > 0) & (df['departure'] > '2023-01-01')]
-        return df[['departure', 'price']]
-    except Exception as e:
-        st.error(f"Error loading data from {filepath}: {str(e)}")
-        return pd.DataFrame(columns=['departure', 'price'])
+def save_data_to_gcs(df):
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False)
+    blob = bucket.blob("flight_prices.csv")
+    blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
 
 def should_call_api(origin, destination):
-    cache_file = f"last_api_call_{origin}_{destination}.txt"
-    if os.path.exists(cache_file):
-        with open(cache_file, "r") as f:
-            last_call = datetime.fromisoformat(f.read().strip())
+    blob = bucket.blob(f"last_api_call_{origin}_{destination}.txt")
+    if blob.exists():
+        last_call = datetime.fromisoformat(blob.download_as_text().strip())
         if datetime.now() - last_call < timedelta(hours=24):
             return False
     return True
 
 def update_api_call_time(origin, destination):
-    cache_file = f"last_api_call_{origin}_{destination}.txt"
-    with open(cache_file, "w") as f:
-        f.write(datetime.now().isoformat())
+    blob = bucket.blob(f"last_api_call_{origin}_{destination}.txt")
+    blob.upload_from_string(datetime.now().isoformat())
 
 def get_flight_offers(origin, destination, year, month):
     start_date = datetime(year, month, 1)
@@ -233,7 +241,7 @@ def main():
             return
 
         with st.spinner("Loading data and making predictions..."):
-            existing_data = load_and_preprocess_data("flight_prices.csv")
+            existing_data = load_data_from_gcs()
             
             if existing_data.empty:
                 st.warning("⚠️ No existing data found. Fetching new data from API.")
@@ -247,11 +255,8 @@ def main():
                     st.success(f"✅ Successfully fetched new data from Amadeus API")
                     combined_data = process_and_combine_data(api_data, existing_data)
                     
-                    combined_data.to_csv("flight_prices.csv", index=False)
-                    st.success(f"💾 Updated data saved to flight_prices.csv ({len(combined_data)} records)")
-                    
-                    verified_data = load_and_preprocess_data("flight_prices.csv")
-                    st.info(f"Verified saved data: {len(verified_data)} records")
+                    save_data_to_gcs(combined_data)
+                    st.success(f"💾 Updated data saved to GCS ({len(combined_data)} records)")
                     
                     update_api_call_time(origin, destination)
                 else:
