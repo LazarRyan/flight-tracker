@@ -4,126 +4,53 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from amadeus import Client, ResponseError
 import random
 from google.cloud import storage
 from io import StringIO
 from google.oauth2 import service_account
-import traceback
 
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Debug: Print all keys in st.secrets
-st.write("Keys in st.secrets:", list(st.secrets.keys()))
-
-# Debug: Print the type and structure of gcp_service_account
-if "gcp_service_account" in st.secrets:
-    st.write("Type of gcp_service_account:", type(st.secrets["gcp_service_account"]))
-    if isinstance(st.secrets["gcp_service_account"], dict):
-        st.write("Keys in gcp_service_account:", list(st.secrets["gcp_service_account"].keys()))
-    else:
-        st.write("gcp_service_account is not a dictionary")
-else:
-    st.write("gcp_service_account not found in secrets")
-
-# Debug: Print the value of gcs_bucket_name
-if "gcs_bucket_name" in st.secrets:
-    st.write("gcs_bucket_name:", st.secrets["gcs_bucket_name"])
-else:
-    st.write("gcs_bucket_name not found in secrets")
-
-# Custom CSS
+# Custom CSS for improved visual security
 st.markdown("""
 <style>
     .reportview-container {
-        background: url("https://images.unsplash.com/photo-1517479149777-5f3b1511d5ad?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80");
-        background-size: cover;
+        background: #f0f2f6;
     }
-    .sidebar .sidebar-content {
-        background: rgba(255, 255, 255, 0.1);
-    }
-    .Widget>label {
-        color: white;
-        font-family: 'Helvetica', sans-serif;
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
     }
     .stButton>button {
-        color: #4F8BF9;
-        border-radius: 50px;
-        height: 3em;
-        width: 100%;
-    }
-    .stTextInput>div>div>input {
-        color: #4F8BF9;
-    }
-    .css-145kmo2 {
-        font-size: 20px;
+        background-color: #4F8BF9;
+        color: white;
+        border-radius: 5px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Amadeus API configuration
-try:
-    AMADEUS_CLIENT_ID = st.secrets["AMADEUS_CLIENT_ID"]
-    AMADEUS_CLIENT_SECRET = st.secrets["AMADEUS_CLIENT_SECRET"]
-    amadeus = Client(client_id=AMADEUS_CLIENT_ID, client_secret=AMADEUS_CLIENT_SECRET)
-except Exception as e:
-    st.error(f"Error initializing Amadeus client: {e}")
-    st.stop()
+@st.cache_resource
+def initialize_clients():
+    # Amadeus API configuration
+    amadeus = Client(
+        client_id=st.secrets["AMADEUS_CLIENT_ID"],
+        client_secret=st.secrets["AMADEUS_CLIENT_SECRET"]
+    )
 
-# Google Cloud Storage configuration
-try:
-    st.write("Attempting to initialize Google Cloud Storage...")
-    
-    # Try to get bucket_name from top-level secrets first
-    if "gcs_bucket_name" in st.secrets:
-        bucket_name = st.secrets["gcs_bucket_name"]
-    # If not found, check if it's nested under 'gcp'
-    elif "gcp" in st.secrets and "bucket_name" in st.secrets["gcp"]:
-        bucket_name = st.secrets["gcp"]["bucket_name"]
-    else:
-        st.error("gcs_bucket_name not found in secrets")
-        st.stop()
-    
-    st.write(f"Bucket name from secrets: {bucket_name}")
-    
-    if not isinstance(bucket_name, str):
-        st.error(f"Invalid bucket name: {bucket_name}. Expected a string.")
-        st.stop()
-    
-    if not bucket_name:
-        st.error("Bucket name is empty")
-        st.stop()
-    
-    gcp_service_account_info = st.secrets["gcp_service_account"]
-    st.write(f"Type of gcp_service_account_info: {type(gcp_service_account_info)}")
-    st.write(f"Keys in gcp_service_account_info: {gcp_service_account_info.keys()}")
-    
-    credentials = service_account.Credentials.from_service_account_info(gcp_service_account_info)
-    st.write("Credentials created successfully.")
-    
+    # Google Cloud Storage configuration
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"]
+    )
     storage_client = storage.Client(credentials=credentials)
-    st.write("Storage client created successfully.")
-    
-    bucket_name = st.secrets["gcs_bucket_name"]
-    st.write(f"Attempting to access bucket: {bucket_name}")
-    
-    bucket = storage_client.bucket(bucket_name)
-    st.write("Bucket accessed successfully.")
-    
-    st.success("Successfully connected to Google Cloud Storage")
-except Exception as e:
-    st.error(f"Error initializing Google Cloud Storage: {str(e)}")
-    st.write(f"Error type: {type(e).__name__}")
-    st.write(f"Error args: {e.args}")
-    st.write("Traceback:")
-    st.code(traceback.format_exc())
-    st.stop()
+    bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
 
-def format_price(price):
-    return f"${price:,.2f}"
+    return amadeus, bucket
+
+amadeus, bucket = initialize_clients()
 
 def load_data_from_gcs():
     blob = bucket.blob("flight_prices.csv")
@@ -132,8 +59,7 @@ def load_data_from_gcs():
         df = pd.read_csv(StringIO(content))
         df['departure'] = pd.to_datetime(df['departure'])
         return df
-    except Exception as e:
-        st.warning(f"Error loading data from GCS: {e}. Starting with empty dataset.")
+    except Exception:
         return pd.DataFrame(columns=['departure', 'price'])
 
 def save_data_to_gcs(df):
@@ -146,20 +72,18 @@ def should_call_api(origin, destination):
     blob = bucket.blob(f"last_api_call_{origin}_{destination}.txt")
     if blob.exists():
         last_call = datetime.fromisoformat(blob.download_as_text().strip())
-        if datetime.now() - last_call < timedelta(hours=24):
-            return False
+        return datetime.now() - last_call >= timedelta(hours=24)
     return True
 
 def update_api_call_time(origin, destination):
     blob = bucket.blob(f"last_api_call_{origin}_{destination}.txt")
     blob.upload_from_string(datetime.now().isoformat())
 
+@st.cache_data
 def get_flight_offers(origin, destination, year, month):
-    start_date = datetime(year, month, 1)
-    if start_date < datetime.now():
-        start_date = datetime.now()
+    start_date = max(datetime(year, month, 1), datetime.now())
     end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-
+    
     all_offers = []
     days_in_month = (end_date - start_date).days + 1
     random_days = random.sample(range(days_in_month), min(3, days_in_month))
@@ -175,8 +99,8 @@ def get_flight_offers(origin, destination, year, month):
                 max=1
             )
             all_offers.extend(response.data)
-        except ResponseError as error:
-            st.error(f"Error fetching data for {current_date.date()}: {error}")
+        except ResponseError:
+            pass
 
     return all_offers
 
@@ -189,37 +113,26 @@ def fetch_data_for_months(origin, destination, num_months=12):
         all_data.extend(month_data)
         current_date = (current_date + timedelta(days=32)).replace(day=1)
         progress_bar.progress((i + 1) / num_months)
-    st.success(f"✅ Fetched data for {num_months} months")
     return all_data
 
 def process_and_combine_data(api_data, existing_data):
-    new_data = []
-    for offer in api_data:
-        price = float(offer['price']['total'])
-        departure = offer['itineraries'][0]['segments'][0]['departure']['at']
-        new_data.append({'departure': departure, 'price': price})
-
+    new_data = [
+        {'departure': offer['itineraries'][0]['segments'][0]['departure']['at'],
+         'price': float(offer['price']['total'])}
+        for offer in api_data
+    ]
     new_df = pd.DataFrame(new_data)
     new_df['departure'] = pd.to_datetime(new_df['departure'])
 
-    st.info(f"New data fetched: {len(new_df)} records")
-
     combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-    st.info(f"Combined data (before processing): {len(combined_df)} records")
-
     combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure'], keep='last')
-    st.info(f"After removing duplicates: {len(combined_df)} records")
-
-    combined_df = combined_df.sort_values('departure')
-
+    
     cutoff_date = datetime.now() - timedelta(days=365)
     combined_df = combined_df[
         (combined_df['departure'] >= cutoff_date) |
         (combined_df['departure'] >= datetime.now())
     ]
-    st.info(f"Final combined data: {len(combined_df)} records")
-
-    return combined_df
+    return combined_df.sort_values('departure')
 
 def engineer_features(df):
     df['day_of_week'] = df['departure'].dt.dayofweek
@@ -228,6 +141,7 @@ def engineer_features(df):
     df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
     return df
 
+@st.cache_resource
 def train_model(df):
     X = df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
     y = df['price']
@@ -251,26 +165,17 @@ def predict_prices(model, start_date, end_date):
     future_df = engineer_features(future_df)
 
     X_future = future_df[['day_of_week', 'month', 'days_to_flight', 'is_weekend']]
-    future_df['predicted price'] = model.predict(X_future)
-    future_df['formatted price'] = future_df['predicted price'].apply(format_price)
+    future_df['predicted_price'] = model.predict(X_future)
 
     return future_df
 
 def plot_prices(df, title):
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(df['departure'], df['predicted price'], marker='o', color='#4F8BF9')
-    ax.set_title(title, color='black', fontsize=16)
-    ax.set_xlabel('Departure Date', color='black')
-    ax.set_ylabel('Predicted Price (USD)', color='black')
-    ax.grid(True, color='gray', linestyle='--', alpha=0.7)
-
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.2f}'))
-    ax.set_ylim(bottom=0)
-    ax.tick_params(colors='black', which='both')
-    fig.autofmt_xdate()
-    plt.tight_layout()
-
-    st.pyplot(fig)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df['departure'], y=df['predicted_price'],
+                             mode='lines+markers', name='Predicted Price'))
+    fig.update_layout(title=title, xaxis_title='Departure Date',
+                      yaxis_title='Predicted Price (USD)')
+    return fig
 
 def validate_input(origin, destination, target_date):
     if len(origin) != 3 or len(destination) != 3:
@@ -302,20 +207,16 @@ def main():
             existing_data = load_data_from_gcs()
 
             if existing_data.empty:
-                st.warning("⚠️ No existing data found. Fetching new data from API.")
+                st.info("⚠️ No existing data found. Fetching new data from API.")
             else:
-                st.success(f"✅ Loaded {len(existing_data)} records from existing data.")
+                st.success(f"✅ Loaded {len(existing_data)} records from existing data in GCS.")
 
             if should_call_api(origin, destination):
-                st.info("Fetching new data from Amadeus API. This may take a few minutes...")
-                api_data = fetch_data_for_months(origin, destination)
+                with st.spinner("Fetching new data from Amadeus API. This may take a few minutes..."):
+                    api_data = fetch_data_for_months(origin, destination)
                 if api_data:
-                    st.success(f"✅ Successfully fetched new data from Amadeus API")
                     combined_data = process_and_combine_data(api_data, existing_data)
-
                     save_data_to_gcs(combined_data)
-                    st.success(f"💾 Updated data saved to GCS ({len(combined_data)} records)")
-
                     update_api_call_time(origin, destination)
                 else:
                     st.warning("⚠️ No new data fetched from API. Using existing data.")
@@ -325,10 +226,7 @@ def main():
                 combined_data = existing_data
 
             if not combined_data.empty:
-                st.write(f"📊 Total records for analysis: {len(combined_data)}")
-
-                with st.expander("View Sample Data"):
-                    st.dataframe(combined_data.head())
+                st.success(f"📊 Total records for analysis: {len(combined_data)}")
 
                 df = engineer_features(combined_data)
                 model, train_mae, test_mae = train_model(df)
@@ -340,20 +238,16 @@ def main():
                 future_prices = predict_prices(model, start_date, end_date)
 
                 st.subheader("📈 Predicted Prices")
-                with st.container():
-                    col1, col2, col3 = st.columns([1,3,1])
-                    with col2:
-                        plot_prices(future_prices, "Predicted Flight Prices")
+                st.plotly_chart(plot_prices(future_prices, "Predicted Flight Prices"), use_container_width=True)
 
-                best_days = future_prices.nsmallest(5, 'predicted price')
+                best_days = future_prices.nsmallest(5, 'predicted_price')
                 st.subheader("💰 Best Days to Buy Tickets")
-                st.table(best_days[['departure', 'formatted price']].rename(columns={'formatted price': 'predicted price'}).set_index('departure'))
+                st.table(best_days[['departure', 'predicted_price']].set_index('departure').rename(columns={'predicted_price': 'Predicted Price'}))
 
                 days_left = (target_date - datetime.now().date()).days
                 st.metric(label=f"⏳ Days until {target_date}", value=days_left)
             else:
                 st.error("❌ No data available for prediction. Please try again with a different date or check your data source.")
-                st.stop()
 
 if __name__ == "__main__":
     main()
