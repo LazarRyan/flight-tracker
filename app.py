@@ -15,7 +15,7 @@ from google.oauth2 import service_account
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS (unchanged)
+# Custom CSS
 st.markdown("""
 <style>
     .reportview-container {
@@ -55,16 +55,38 @@ except Exception as e:
 
 # Google Cloud Storage configuration
 try:
+    # Debug: Print all keys in st.secrets
+    st.write("Keys in st.secrets:", list(st.secrets.keys()))
+
+    if "gcp_service_account" not in st.secrets:
+        st.error("gcp_service_account not found in secrets")
+        st.stop()
+
     gcp_service_account_info = st.secrets["gcp_service_account"]
+    
+    # Debug: Print the type and content of gcp_service_account_info
+    st.write("Type of gcp_service_account_info:", type(gcp_service_account_info))
+    st.write("Content of gcp_service_account_info:", gcp_service_account_info)
+
+    # Check if gcp_service_account_info is a dictionary
+    if not isinstance(gcp_service_account_info, dict):
+        st.error("gcp_service_account_info is not a dictionary")
+        st.stop()
+
     credentials = service_account.Credentials.from_service_account_info(gcp_service_account_info)
     storage_client = storage.Client(credentials=credentials)
+    
+    if "gcs_bucket_name" not in st.secrets:
+        st.error("gcs_bucket_name not found in secrets")
+        st.stop()
+
     bucket_name = st.secrets["gcs_bucket_name"]
     bucket = storage_client.bucket(bucket_name)
+
 except Exception as e:
     st.error(f"Error initializing Google Cloud Storage: {e}")
     st.stop()
 
-# Helper functions
 def format_price(price):
     return f"${price:,.2f}"
 
