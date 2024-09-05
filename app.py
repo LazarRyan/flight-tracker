@@ -10,6 +10,7 @@ import json
 import os
 from amadeus import Client, ResponseError
 import time
+import random
 
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
@@ -87,35 +88,41 @@ def update_api_call_time():
     with open("last_api_call.txt", "w") as f:
         f.write(datetime.now().isoformat())
 
-def get_flight_offers(origin, destination, departure_date):
-    max_date = datetime.now() + timedelta(days=360)
-    if departure_date > max_date.date():
-        st.warning(f"Selected date is too far in the future. Using {max_date.date()} instead.")
-        departure_date = max_date.date()
+def get_flight_offers(origin, destination, year, month):
+    start_date = datetime(year, month, 1)
+    if start_date < datetime.now():
+        start_date = datetime.now()
+    end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     
-    retries = 3
-    for attempt in range(retries):
+    all_offers = []
+    days_in_month = (end_date - start_date).days + 1
+    random_days = random.sample(range(days_in_month), min(30, days_in_month))
+    
+    for day in random_days:
+        current_date = start_date + timedelta(days=day)
         try:
             response = amadeus.shopping.flight_offers_search.get(
                 originLocationCode=origin,
                 destinationLocationCode=destination,
-                departureDate=departure_date.strftime("%Y-%m-%d"),
+                departureDate=current_date.strftime("%Y-%m-%d"),
                 adults=1,
                 max=5
             )
-            return response.data
+            all_offers.extend(response.data)
+            st.success(f"Fetched data for {current_date.date()}")
         except ResponseError as error:
-            st.error(f"Error fetching data from Amadeus API: {error}")
-            st.error(f"Error details: {error.response.body}")
-            if attempt < retries - 1:
-                st.warning(f"Retrying in 5 seconds... (Attempt {attempt + 2}/{retries})")
-                time.sleep(5)
-            else:
-                st.error("Max retries reached. Please try again later.")
-                return []
-        except Exception as e:
-            st.error(f"Unexpected error: {e}")
-            return []
+            st.error(f"Error fetching data for {current_date.date()}: {error}")
+    
+    return all_offers
+
+def fetch_data_for_months(origin, destination, num_months=12):
+    all_data = []
+    current_date = datetime.now()
+    for _ in range(num_months):
+        month_data = get_flight_offers(origin, destination, current_date.year, current_date.month)
+        all_data.extend(month_data)
+        current_date = (current_date + timedelta(days=32)).replace(day=1)
+    return all_data
 
 def process_and_combine_data(api_data, existing_data):
     new_data = []
@@ -214,14 +221,14 @@ def main():
             existing_data = load_and_preprocess_data("flight_prices.csv")
             
             if existing_data.empty:
-                st.warning("⚠️ No existing data found. Attempting to fetch data from API.")
+                st.warning("⚠️ No existing data found. Fetching new data from API.")
             else:
                 st.success(f"✅ Loaded {len(existing_data)} records from existing data.")
             
             if should_call_api():
-                api_data = get_flight_offers(origin, destination, target_date)
+                api_data = fetch_data_for_months(origin, destination)
                 if api_data:
-                    st.success("✅ Successfully fetched new data from Amadeus API")
+                    st.success(f"✅ Successfully fetched {len(api_data)} new records from Amadeus API")
                     combined_data = process_and_combine_data(api_data, existing_data)
                     combined_data.to_csv("flight_prices.csv", index=False)
                     st.success("💾 Updated data saved to flight_prices.csv")
