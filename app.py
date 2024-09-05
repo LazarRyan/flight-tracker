@@ -15,7 +15,7 @@ import random
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS (unchanged)
+# Custom CSS
 st.markdown("""
 <style>
     .reportview-container {
@@ -44,12 +44,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Amadeus API configuration (unchanged)
+# Amadeus API configuration
 try:
     AMADEUS_CLIENT_ID = st.secrets["AMADEUS_CLIENT_ID"]
     AMADEUS_CLIENT_SECRET = st.secrets["AMADEUS_CLIENT_SECRET"]
     amadeus = Client(client_id=AMADEUS_CLIENT_ID, client_secret=AMADEUS_CLIENT_SECRET)
-    st.success("Amadeus client initialized successfully")
 except Exception as e:
     st.error(f"Error initializing Amadeus client: {e}")
     st.stop()
@@ -75,17 +74,18 @@ def load_and_preprocess_data(filepath):
         st.error(f"Error loading data from {filepath}: {str(e)}")
         return pd.DataFrame(columns=['departure', 'price'])
 
-def should_call_api():
-    cache_file = "last_api_call.txt"
+def should_call_api(origin, destination):
+    cache_file = f"last_api_call_{origin}_{destination}.txt"
     if os.path.exists(cache_file):
         with open(cache_file, "r") as f:
             last_call = datetime.fromisoformat(f.read().strip())
-        if datetime.now() - last_call < timedelta(hours=1):
+        if datetime.now() - last_call < timedelta(hours=24):
             return False
     return True
 
-def update_api_call_time():
-    with open("last_api_call.txt", "w") as f:
+def update_api_call_time(origin, destination):
+    cache_file = f"last_api_call_{origin}_{destination}.txt"
+    with open(cache_file, "w") as f:
         f.write(datetime.now().isoformat())
 
 def get_flight_offers(origin, destination, year, month):
@@ -207,7 +207,7 @@ def main():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        origin = st.text_input("🛫 Origin Airport Code", "JFK").upper()
+        origin = st.text_input("🛫 Origin Airport Code", "EWR").upper()
     with col2:
         destination = st.text_input("🛬 Destination Airport Code", "FCO").upper()
     with col3:
@@ -225,19 +225,19 @@ def main():
             else:
                 st.success(f"✅ Loaded {len(existing_data)} records from existing data.")
             
-            if should_call_api():
+            if should_call_api(origin, destination):
                 api_data = fetch_data_for_months(origin, destination)
                 if api_data:
                     st.success(f"✅ Successfully fetched {len(api_data)} new records from Amadeus API")
                     combined_data = process_and_combine_data(api_data, existing_data)
                     combined_data.to_csv("flight_prices.csv", index=False)
                     st.success("💾 Updated data saved to flight_prices.csv")
-                    update_api_call_time()
+                    update_api_call_time(origin, destination)
                 else:
                     st.warning("⚠️ No new data fetched from API. Using existing data.")
                     combined_data = existing_data
             else:
-                st.info("ℹ️ Using cached data. API call limit reached for today.")
+                st.info(f"ℹ️ Using cached data for {origin} to {destination}. API call limit reached for this route today.")
                 combined_data = existing_data
             
             if not combined_data.empty:
@@ -249,7 +249,7 @@ def main():
                 df = engineer_features(combined_data)
                 model, train_mae, test_mae = train_model(df)
                 
-                st.info(f"🤖 Model trained. Train MAE: {format_price(train_mae)}, Test MAE: {format_price(test_mae)}")
+                st.info(f"🤖 Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
                 
                 start_date = datetime.now().date()
                 end_date = target_date + timedelta(days=30)
