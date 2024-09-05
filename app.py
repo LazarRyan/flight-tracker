@@ -220,9 +220,9 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        origin = st.text_input("🛫 Origin Airport Code", "EWR").upper()
+        origin = st.text_input("🛫 Origin Airport Code", "").upper()
     with col2:
-        destination = st.text_input("🛬 Destination Airport Code", "FCO").upper()
+        destination = st.text_input("🛬 Destination Airport Code", "").upper()
     with col3:
         target_date = st.date_input("🗓️ Target Flight Date", value=datetime(2025, 9, 10))
 
@@ -234,7 +234,7 @@ def main():
             existing_data = load_data_from_gcs(origin, destination)
 
             if existing_data.empty:
-                st.info("⚠️ No existing data found for this route. Fetching new data from API.")
+                st.info(f"⚠️ No existing data found for {origin} to {destination}. Fetching new data from API.")
             else:
                 st.success(f"✅ Loaded {len(existing_data)} existing records for {origin} to {destination}.")
 
@@ -291,7 +291,7 @@ def main():
                 st.metric(label="📊 Price Range", value=f"${price_range:.2f}")
 
             else:
-                st.error("❌ No data available for prediction. Please try again with a different route or check your data source.")
+                st.error(f"❌ No data available for prediction for {origin} to {destination}. Please try again with a different route or check your data source.")
 
 if __name__ == "__main__":
     main()
