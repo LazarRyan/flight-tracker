@@ -15,7 +15,7 @@ import random
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS
+# Custom CSS (unchanged)
 st.markdown("""
 <style>
     .reportview-container {
@@ -44,7 +44,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Amadeus API configuration
+# Amadeus API configuration (unchanged)
 try:
     AMADEUS_CLIENT_ID = st.secrets["AMADEUS_CLIENT_ID"]
     AMADEUS_CLIENT_SECRET = st.secrets["AMADEUS_CLIENT_SECRET"]
@@ -96,7 +96,7 @@ def get_flight_offers(origin, destination, year, month):
     
     all_offers = []
     days_in_month = (end_date - start_date).days + 1
-    random_days = random.sample(range(days_in_month), min(30, days_in_month))
+    random_days = random.sample(range(days_in_month), min(3, days_in_month))
     
     for day in random_days:
         current_date = start_date + timedelta(days=day)
@@ -106,7 +106,7 @@ def get_flight_offers(origin, destination, year, month):
                 destinationLocationCode=destination,
                 departureDate=current_date.strftime("%Y-%m-%d"),
                 adults=1,
-                max=5
+                max=1
             )
             all_offers.extend(response.data)
             st.success(f"Fetched data for {current_date.date()}")
