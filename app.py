@@ -340,7 +340,7 @@ def main():
                 st.table(best_days[['departure', 'formatted price']].rename(columns={'formatted price': 'predicted price'}).set_index('departure'))
 
                 days_left = (target_date - datetime.now().date()).days
-                st.metric(                st.metric(label=f"⏳ Days until {target_date}", value=days_left)
+                st.metric(label=f"⏳ Days until {target_date}", value=days_left)
             else:
                 st.error("❌ No data available for prediction. Please try again with a different date or check your data source.")
                 st.stop()
