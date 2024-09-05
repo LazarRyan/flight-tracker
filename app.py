@@ -6,10 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-import json
-import os
 from amadeus import Client, ResponseError
-import time
 import random
 from google.cloud import storage
 from io import StringIO
@@ -18,7 +15,7 @@ from google.oauth2 import service_account
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS
+# Custom CSS (unchanged)
 st.markdown("""
 <style>
     .reportview-container {
@@ -61,12 +58,13 @@ try:
     gcp_service_account_info = st.secrets["gcp_service_account"]
     credentials = service_account.Credentials.from_service_account_info(gcp_service_account_info)
     storage_client = storage.Client(credentials=credentials)
-    bucket_name = st.secrets["gcs_bucket"]["name"]
+    bucket_name = st.secrets["gcs_bucket_name"]
     bucket = storage_client.bucket(bucket_name)
 except Exception as e:
     st.error(f"Error initializing Google Cloud Storage: {e}")
     st.stop()
 
+# Helper functions
 def format_price(price):
     return f"${price:,.2f}"
 
