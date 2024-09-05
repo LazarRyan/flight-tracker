@@ -68,9 +68,9 @@ try:
     st.write("Type of gcp_service_account_info:", type(gcp_service_account_info))
 
     # Convert AttrDict to a regular dictionary
-    gcp_service_account_dict = gcp_service_account_info.to_dict()
+    gcp_service_account_dict = dict(gcp_service_account_info)
 
-    # Debug: Print the content of gcp_service_account_dict (be careful not to expose sensitive info)
+    # Debug: Print the keys in gcp_service_account_dict
     st.write("Keys in gcp_service_account_dict:", list(gcp_service_account_dict.keys()))
 
     credentials = service_account.Credentials.from_service_account_info(gcp_service_account_dict)
