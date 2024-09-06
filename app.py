@@ -78,74 +78,77 @@ def should_call_api(origin, destination):
 
     route_key = f"{origin}-{destination}"
     if route_key in api_calls:
-        last_call_date = datetime.strptime(api_calls[route_key], "%Y-%m-%d").date()
-        if last_call_date == today:
-            return False
+        calls_today = api_calls[route_key].get(today.strftime("%Y-%m-%d"), 0)
+        if calls_today >= 2:
+            return False, 0
+        else:
+            return True, 2 - calls_today
+    else:
+        api_calls[route_key] = {}
 
-    # Count unique routes called today
-    routes_called_today = sum(1 for date in api_calls.values() if date == today.strftime("%Y-%m-%d"))
-    if routes_called_today >= 2:
-        return False
-
-    # Update the API call time for this route
-    api_calls[route_key] = today.strftime("%Y-%m-%d")
+    # Update the API call count for this route
+    api_calls[route_key][today.strftime("%Y-%m-%d")] = 0
     blob.upload_from_string(json.dumps(api_calls), content_type="application/json")
 
-    return True
+    return True, 2
 
 def fetch_and_process_data(origin, destination, start_date, end_date):
+    can_call, calls_left = should_call_api(origin, destination)
+    if not can_call:
+        st.warning("API call limit reached for this route today. Using existing data only.")
+        return pd.DataFrame()
+
     all_data = []
-    current_date = start_date
-    end_date = start_date + relativedelta(months=12)
-    
-    total_calls = 12 * 3  # 12 months, 3 calls per month
     progress_bar = st.progress(0)
     progress_text = st.empty()
-    calls_made = 0
 
-    while current_date < end_date:
-        month_end = current_date + relativedelta(months=1, days=-1)
-        sample_dates = [current_date + timedelta(days=random.randint(0, (month_end - current_date).days)) for _ in range(3)]
-
-        for sample_date in sample_dates:
-            try:
-                response = amadeus.shopping.flight_offers_search.get(
-                    originLocationCode=origin,
-                    destinationLocationCode=destination,
-                    departureDate=sample_date.strftime('%Y-%m-%d'),
-                    adults=1
-                )
-                data = response.data
-                if data:
+    for i in range(calls_left):
+        try:
+            response = amadeus.shopping.flight_offers_search.get(
+                originLocationCode=origin,
+                destinationLocationCode=destination,
+                departureDate=start_date.strftime('%Y-%m-%d'),
+                adults=1
+            )
+            data = response.data
+            if data:
+                for offer in data:
                     flight_data = {
-                        'departure': data[0]['itineraries'][0]['segments'][0]['departure']['at'],
-                        'price': float(data[0]['price']['total']),
+                        'departure': offer['itineraries'][0]['segments'][0]['departure']['at'],
+                        'price': float(offer['price']['total']),
                         'origin': origin,
                         'destination': destination
                     }
                     all_data.append(flight_data)
-                    logging.info(f"Fetched data for {origin} to {destination} on {sample_date}")
-                else:
-                    logging.warning(f"No data found for {origin} to {destination} on {sample_date}")
-            except ResponseError as error:
-                st.error(f"Error fetching data from Amadeus API: {error}")
-                logging.error(f"Error fetching data from Amadeus API: {error}")
-            except Exception as e:
-                st.error(f"An unexpected error occurred while fetching data: {str(e)}")
-                logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
-            
-            calls_made += 1
-            progress = calls_made / total_calls
-            progress_bar.progress(progress)
-            progress_text.text(f"Fetching data: {calls_made}/{total_calls} calls made")
-            
-            # Add a delay between API calls
-            time.sleep(1)  # 1 second delay
-
-        current_date += relativedelta(months=1)
+                logging.info(f"Fetched data for {origin} to {destination} on {start_date}")
+            else:
+                logging.warning(f"No data found for {origin} to {destination} on {start_date}")
+        except ResponseError as error:
+            st.error(f"Error fetching data from Amadeus API: {error}")
+            logging.error(f"Error fetching data from Amadeus API: {error}")
+        except Exception as e:
+            st.error(f"An unexpected error occurred while fetching data: {str(e)}")
+            logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
+        
+        progress = (i + 1) / calls_left
+        progress_bar.progress(progress)
+        progress_text.text(f"Fetching data: {i + 1}/{calls_left} calls made")
+        
+        # Add a delay between API calls
+        time.sleep(1)  # 1 second delay
 
     progress_bar.empty()
     progress_text.empty()
+
+    # Update the API call count
+    api_calls_file = "api_calls.json"
+    blob = bucket.blob(api_calls_file)
+    content = blob.download_as_text()
+    api_calls = json.loads(content)
+    route_key = f"{origin}-{destination}"
+    today = datetime.now().date().strftime("%Y-%m-%d")
+    api_calls[route_key][today] = api_calls[route_key].get(today, 0) + calls_left
+    blob.upload_from_string(json.dumps(api_calls), content_type="application/json")
 
     df = pd.DataFrame(all_data)
     if not df.empty:
@@ -239,20 +242,13 @@ def main():
                 else:
                     st.info(f"No existing data found for {origin} to {destination}. Will fetch new data.")
 
-                if should_call_api(origin, destination):
-                    st.info("Fetching new data from API...")
-                    new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
-                    if not new_data.empty:
-                        existing_data = pd.concat([existing_data, new_data], ignore_index=True)
-                        existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
-                        save_data_to_gcs(existing_data, origin, destination)
-                        st.success(f"Data updated successfully. Total records: {len(existing_data)}")
-                    else:
-                        st.warning("Unable to fetch new data from API. Proceeding with existing data.")
-                else:
-                    st.info("API call limit reached for today. Using existing data.")
-
-                if existing_data.empty:
+                new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
+                if not new_data.empty:
+                    existing_data = pd.concat([existing_data, new_data], ignore_index=True)
+                    existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+                    save_data_to_gcs(existing_data, origin, destination)
+                    st.success(f"Data updated successfully. Total records: {len(existing_data)}")
+                elif existing_data.empty:
                     st.error("No data available for prediction. Please try again later or with a different route.")
                     return
 
