@@ -63,27 +63,30 @@ def save_data_to_gcs(df, origin, destination):
 
 def fetch_and_process_data(origin, destination, start_date, end_date):
     try:
-        response = amadeus.shopping.flight_dates.get(
-            origin=origin,
-            destination=destination,
-            departureDate=f"{start_date},{end_date}"
+        response = amadeus.shopping.flight_offers_search.get(
+            originLocationCode=origin,
+            destinationLocationCode=destination,
+            departureDate=start_date,
+            adults=1
         )
         data = response.data
-        df = pd.DataFrame(data)
-        df['departure'] = pd.to_datetime(df['departureDate'])
-        df['price'] = df['price'].apply(lambda x: float(x['total']))
-        df['origin'] = origin
-        df['destination'] = destination
-        return df[['departure', 'price', 'origin', 'destination']]
+        if not data:
+            st.warning("No flight offers found for the specified route and dates.")
+            return pd.DataFrame()
+        
+        df = pd.DataFrame([{
+            'departure': offer['itineraries'][0]['segments'][0]['departure']['at'],
+            'price': float(offer['price']['total']),
+            'origin': origin,
+            'destination': destination
+        } for offer in data])
+        df['departure'] = pd.to_datetime(df['departure'])
+        return df
     except ResponseError as error:
         st.error(f"Error fetching data from Amadeus API: {error}")
         logging.error(f"Error fetching data from Amadeus API: {error}")
         if error.response.status_code == 500:
             st.warning("The Amadeus server encountered an internal error. This is not an issue with our application. Please try again later.")
-        elif error.response.status_code == 400:
-            st.warning("The request to Amadeus API was invalid. Please check the input parameters.")
-        elif error.response.status_code == 401:
-            st.warning("Authentication failed with Amadeus API. Please check the API credentials.")
         else:
             st.warning(f"An unexpected error occurred with status code: {error.response.status_code}")
         return pd.DataFrame()
@@ -146,6 +149,7 @@ def validate_input(origin, destination, outbound_date):
         st.error("Please select a future date for your outbound flight.")
         return False
     return True
+
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
@@ -173,7 +177,7 @@ def main():
                     st.info(f"No existing data found for {origin} to {destination}. Will fetch new data.")
 
                 st.info("Fetching new data from API...")
-                new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
+                new_data = fetch_and_process_data(origin, destination, outbound_date, outbound_date)
                 if not new_data.empty:
                     existing_data = pd.concat([existing_data, new_data], ignore_index=True)
                     existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
