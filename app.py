@@ -16,6 +16,7 @@ import random
 import json
 import openai
 import time
+import xgboost as xbg
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -171,19 +172,24 @@ def train_model(df, origin, destination):
     param_grid = {
         'n_estimators': [100, 200],
         'max_depth': [3, 4, 5],
-        'learning_rate': [0.01, 0.1]
+        'learning_rate': [0.01, 0.1],
+        'subsample': [0.8, 1.0],
+        'colsample_bytree': [0.8, 1.0]
     }
     
-    model = GridSearchCV(GradientBoostingRegressor(random_state=42), param_grid, cv=5)
-    model.fit(X_train, y_train)
+    model = xgb.XGBRegressor(random_state=42)
+    grid_search = GridSearchCV(model, param_grid, cv=5, n_jobs=-1, verbose=1)
+    grid_search.fit(X_train, y_train)
     
-    train_predictions = model.predict(X_train)
-    test_predictions = model.predict(X_test)
+    best_model = grid_search.best_estimator_
+    
+    train_predictions = best_model.predict(X_train)
+    test_predictions = best_model.predict(X_test)
     
     train_mae = mean_absolute_error(y_train, train_predictions)
     test_mae = mean_absolute_error(y_test, test_predictions)
     
-    return model.best_estimator_, train_mae, test_mae
+    return best_model, train_mae, test_mae
 
 def predict_prices(model, start_date, end_date, origin, destination):
     date_range = pd.date_range(start=start_date, end=end_date)
