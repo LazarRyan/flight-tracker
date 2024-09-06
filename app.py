@@ -14,7 +14,6 @@ from google.oauth2 import service_account
 import logging
 import random
 import json
-import time
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -89,64 +88,42 @@ def should_call_api(origin, destination):
     return True
 
 def fetch_and_process_data(origin, destination, start_date, end_date):
-    can_call, calls_left = should_call_api(origin, destination)
-    if not can_call:
-        st.warning("API call limit reached for this route today. Using existing data only.")
-        return pd.DataFrame()
-
     all_data = []
-    progress_bar = st.progress(0)
-    progress_text = st.empty()
+    current_date = start_date
+    end_date = start_date + relativedelta(months=12)
 
-    for i in range(calls_left):
-        try:
-            response = amadeus.shopping.flight_offers_search.get(
-                originLocationCode=origin,
-                destinationLocationCode=destination,
-                departureDate=start_date.strftime('%Y-%m-%d'),
-                adults=1
-            )
-            data = response.data
-            if data:
-                for offer in data:
+    while current_date < end_date:
+        month_end = current_date + relativedelta(months=1, days=-1)
+        sample_dates = [current_date + timedelta(days=random.randint(0, (month_end - current_date).days)) for _ in range(3)]
+
+        for sample_date in sample_dates:
+            try:
+                response = amadeus.shopping.flight_offers_search.get(
+                    originLocationCode=origin,
+                    destinationLocationCode=destination,
+                    departureDate=sample_date.strftime('%Y-%m-%d'),
+                    adults=1
+                )
+                data = response.data
+                if data:
                     flight_data = {
-                        'departure': offer['itineraries'][0]['segments'][0]['departure']['at'],
-                        'price': float(offer['price']['total']),
+                        'departure': data[0]['itineraries'][0]['segments'][0]['departure']['at'],
+                        'price': float(data[0]['price']['total']),
                         'origin': origin,
                         'destination': destination
                     }
                     all_data.append(flight_data)
-                logging.info(f"Fetched data for {origin} to {destination} on {start_date}")
-            else:
-                logging.warning(f"No data found for {origin} to {destination} on {start_date}")
-        except ResponseError as error:
-            st.error(f"Error fetching data from Amadeus API: {error}")
-            logging.error(f"Error fetching data from Amadeus API: {error}")
-        except Exception as e:
-            st.error(f"An unexpected error occurred while fetching data: {str(e)}")
-            logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
-        
-        progress = (i + 1) / calls_left
-        progress_bar.progress(progress)
-        progress_text.text(f"Fetching data: {i + 1}/{calls_left} calls made")
-        
-        # Add a delay between API calls
-        time.sleep(1)  # 1 second delay
+                    logging.info(f"Fetched data for {origin} to {destination} on {sample_date}")
+                else:
+                    logging.warning(f"No data found for {origin} to {destination} on {sample_date}")
+            except ResponseError as error:
+                st.error(f"Error fetching data from Amadeus API: {error}")
+                logging.error(f"Error fetching data from Amadeus API: {error}")
+            except Exception as e:
+                st.error(f"An unexpected error occurred while fetching data: {str(e)}")
+                logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
 
-    progress_bar.empty()
-    progress_text.empty()
-
-    # Update the API call count
-    api_calls_file = "api_calls.json"
-    blob = bucket.blob(api_calls_file)
-    content = blob.download_as_text()
-    api_calls = json.loads(content)
-    route_key = f"{origin}-{destination}"
-    today = datetime.now().date().strftime("%Y-%m-%d")
-    if route_key not in api_calls:
-        api_calls[route_key] = {}
-    api_calls[route_key][today] = api_calls[route_key].get(today, 0) + calls_left
-    blob.upload_from_string(json.dumps(api_calls), content_type="application/json")
+        current_date += relativedelta(months=1)
 
     df = pd.DataFrame(all_data)
     if not df.empty:
