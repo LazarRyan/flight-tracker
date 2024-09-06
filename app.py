@@ -196,62 +196,72 @@ def main():
             return
 
         with st.spinner("Loading data and making predictions..."):
-            existing_data = load_data_from_gcs(origin, destination)
+            try:
+                existing_data = load_data_from_gcs(origin, destination)
 
-            if not existing_data.empty:
-                most_recent_data = existing_data['departure'].max()
-                if most_recent_data >= datetime.now().date():
-                    st.success(f"Using existing data (last updated: {most_recent_data.date()})")
-                else:
-                    st.info(f"Existing data found, but it's outdated (last entry: {most_recent_data.date()}). Checking for updates...")
+                if not existing_data.empty:
+                    try:
+                        most_recent_data = existing_data['departure'].max()
+                        if most_recent_data.date() >= datetime.now().date():
+                            st.success(f"Using existing data (last updated: {most_recent_data.date()})")
+                        else:
+                            st.info(f"Existing data found, but it's outdated (last entry: {most_recent_data.date()}). Checking for updates...")
+                    except Exception as e:
+                        st.warning(f"Error processing existing data: {str(e)}. Will attempt to fetch new data.")
+                        logging.error(f"Error processing existing data: {str(e)}")
+                        existing_data = pd.DataFrame()  # Reset to empty DataFrame if there's an error
 
-            api_calls_made = 0
-            while should_call_api(origin, destination) and api_calls_made < 2:
-                st.info(f"Fetching new data from API (Call {api_calls_made + 1}/2)...")
-                new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
-                if not new_data.empty:
-                    existing_data = pd.concat([existing_data, new_data], ignore_index=True)
-                    existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
-                    save_data_to_gcs(existing_data, origin, destination)
-                    update_api_call_time(origin, destination)
-                    api_calls_made += 1
-                    st.success(f"Data updated successfully. Total records: {len(existing_data)}")
-                else:
-                    st.warning(f"No new data fetched from API on call {api_calls_made + 1}.")
-                    break
+                api_calls_made = 0
+                while should_call_api(origin, destination) and api_calls_made < 2:
+                    st.info(f"Fetching new data from API (Call {api_calls_made + 1}/2)...")
+                    new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
+                    if not new_data.empty:
+                        existing_data = pd.concat([existing_data, new_data], ignore_index=True)
+                        existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+                        save_data_to_gcs(existing_data, origin, destination)
+                        update_api_call_time(origin, destination)
+                        api_calls_made += 1
+                        st.success(f"Data updated successfully. Total records: {len(existing_data)}")
+                    else:
+                        st.warning(f"No new data fetched from API on call {api_calls_made + 1}.")
+                        break
 
-            if existing_data.empty:
-                st.error("No data available for prediction. Please try again with a different route or check your data source.")
-                return
+                if existing_data.empty:
+                    st.error("No data available for prediction. Please try again with a different route or check your data source.")
+                    return
 
-            st.success(f"Analyzing {len(existing_data)} records for your route.")
+                st.success(f"Analyzing {len(existing_data)} records for your route.")
 
-            with st.expander("View Sample Data"):
-                st.dataframe(existing_data.head())
+                with st.expander("View Sample Data"):
+                    st.dataframe(existing_data.head())
 
-            df = engineer_features(existing_data)
-            model, train_mae, test_mae = train_model(df)
+                df = engineer_features(existing_data)
+                model, train_mae, test_mae = train_model(df)
 
-            logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
+                logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
 
-            future_prices = predict_prices(model, datetime.now().date(), outbound_date, origin, destination, 
-                                           existing_data['origin'].unique(), existing_data['destination'].unique())
+                future_prices = predict_prices(model, datetime.now().date(), outbound_date, origin, destination, 
+                                               existing_data['origin'].unique(), existing_data['destination'].unique())
 
-            st.subheader("📈 Predicted Prices")
-            fig = plot_prices(future_prices, f"Predicted Prices ({origin} to {destination})")
-            st.plotly_chart(fig, use_container_width=True)
+                st.subheader("📈 Predicted Prices")
+                fig = plot_prices(future_prices, f"Predicted Prices ({origin} to {destination})")
+                st.plotly_chart(fig, use_container_width=True)
 
-            best_days = future_prices.nsmallest(5, 'predicted_price')
-            st.subheader("💰 Best Days to Book")
-            st.table(best_days[['departure', 'predicted_price']].set_index('departure').rename(columns={'predicted_price': 'Predicted Price ($)'}))
+                best_days = future_prices.nsmallest(5, 'predicted_price')
+                st.subheader("💰 Best Days to Book")
+                st.table(best_days[['departure', 'predicted_price']].set_index('departure').rename(columns={'predicted_price': 'Predicted Price ($)'}))
 
-            avg_price = future_prices['predicted_price'].mean()
-            st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
+                avg_price = future_prices['predicted_price'].mean()
+                st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
 
-            price_range = future_prices['predicted_price'].max() - future_prices['predicted_price'].min()
-            st.metric(label="📊 Price Range", value=f"${price_range:.2f}")
+                price_range = future_prices['predicted_price'].max() - future_prices['predicted_price'].min()
+                st.metric(label="📊 Price Range", value=f"${price_range:.2f}")
 
-            st.info(f"Predictions shown are for flights from today until {outbound_date}.")
+                st.info(f"Predictions shown are for flights from today until {outbound_date}.")
+
+            except Exception as e:
+                st.error(f"An unexpected error occurred: {str(e)}")
+                logging.error(f"Unexpected error in main function: {str(e)}", exc_info=True)
 
 if __name__ == "__main__":
     main()
