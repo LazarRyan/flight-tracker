@@ -16,8 +16,27 @@ import random
 import json
 import openai
 
-# Near the top of your file, after the imports
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+def initialize_openai():
+    if "OPENAI_API_KEY" not in st.secrets:
+        st.error("OpenAI API key not found in secrets. Please add it to continue.")
+        st.stop()
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
+
+def chatbot(user_input, context):
+    try:
+        initialize_openai()  # Only initialize when the chatbot is used
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant for a flight price prediction app. You can answer questions about flights, travel to Italy, and using the app."},
+                {"role": "user", "content": f"Context: {context}\n\nUser question: {user_input}"}
+            ]
+        )
+        return response.choices[0].message['content']
+    except Exception as e:
+        logging.error(f"Error in chatbot function: {str(e)}")
+        return f"I'm sorry, I encountered an error: {str(e)}. Please try again later."
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -225,17 +244,10 @@ def chatbot(user_input, context):
         logging.error(f"Error in chatbot function: {str(e)}")
         return "I'm sorry, I encountered an error. Please try again later."
 
-# Rewritten main() function
+# Main Section
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
-
-    # Load and preprocess data
-    df = load_data()
-    X, y = preprocess_data(df)
-
-    # Train model
-    model = train_model(X, y)
 
     # User input
     col1, col2 = st.columns(2)
@@ -247,24 +259,35 @@ def main():
     travel_date = st.date_input("Select travel date:", min_value=datetime(2025, 1, 1), max_value=datetime(2025, 12, 31))
 
     if st.button("Predict Price"):
-        # Prepare input for prediction
-        input_data = prepare_input(origin, destination, travel_date)
-        
-        # Make prediction
-        prediction = model.predict(input_data)[0]
-        
-        # Display prediction
-        st.success(f"Predicted flight price: ${prediction:.2f}")
-
-        # Display flight options
-        display_flight_options(origin, destination, travel_date)
+        if validate_input(origin, destination, travel_date):
+            with st.spinner("Fetching and processing data..."):
+                df = load_data_from_gcs(origin, destination)
+                if df.empty or should_call_api(origin, destination):
+                    new_data = fetch_and_process_data(origin, destination, travel_date, travel_date + relativedelta(months=12))
+                    df = pd.concat([df, new_data]).drop_duplicates().reset_index(drop=True)
+                    save_data_to_gcs(df, origin, destination)
+                
+                df = engineer_features(df)
+                model, train_mae, test_mae = train_model(df)
+                
+                future_prices = predict_prices(model, travel_date, travel_date + timedelta(days=30), origin, destination)
+                
+                st.write(f"Model performance - Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
+                
+                fig = plot_prices(future_prices, f"Predicted Prices for {origin} to {destination}")
+                st.plotly_chart(fig)
+                
+                best_days = future_prices.nsmallest(5, 'predicted_price')
+                st.write("Best days to fly in the next 30 days:")
+                st.table(format_best_days_table(best_days))
 
     # Add chatbot section
     st.subheader("💬 Chat with our AI Assistant")
     user_input = st.text_input("Ask a question about flights, travel to Italy, or using this app:")
     if user_input:
-        context = f"The user is using a flight price prediction app for travel to Italy in 2025. They can input origin and destination airport codes and select a date to predict flight prices."
-        response = chatbot(user_input, context)
+        with st.spinner("AI Assistant is thinking..."):
+            context = f"The user is using a flight price prediction app for travel to Italy in 2025. They can input origin and destination airport codes and select a date to predict flight prices."
+            response = chatbot(user_input, context)
         st.write("AI Assistant:", response)
 
     # Display some general information about Italy
