@@ -238,7 +238,7 @@ def main():
         destination = st.text_input("Enter destination airport code in Italy (e.g., FCO):", "FCO")
 
     travel_date = st.date_input("Select travel date:", 
-                                min_value=datetime(2025, 1, 1), 
+                                min_value=datetime.now().date(), 
                                 max_value=datetime(2025, 12, 31),
                                 value=datetime(2025, 6, 1))
 
