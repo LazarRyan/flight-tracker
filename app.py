@@ -14,6 +14,7 @@ from google.oauth2 import service_account
 import logging
 import random
 import json
+import time
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -96,6 +97,11 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
     all_data = []
     current_date = start_date
     end_date = start_date + relativedelta(months=12)
+    
+    total_calls = 12 * 3  # 12 months, 3 calls per month
+    progress_bar = st.progress(0)
+    progress_text = st.empty()
+    calls_made = 0
 
     while current_date < end_date:
         month_end = current_date + relativedelta(months=1, days=-1)
@@ -127,8 +133,19 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
             except Exception as e:
                 st.error(f"An unexpected error occurred while fetching data: {str(e)}")
                 logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
+            
+            calls_made += 1
+            progress = calls_made / total_calls
+            progress_bar.progress(progress)
+            progress_text.text(f"Fetching data: {calls_made}/{total_calls} calls made")
+            
+            # Add a delay between API calls
+            time.sleep(1)  # 1 second delay
 
         current_date += relativedelta(months=1)
+
+    progress_bar.empty()
+    progress_text.empty()
 
     df = pd.DataFrame(all_data)
     if not df.empty:
