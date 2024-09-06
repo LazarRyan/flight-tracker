@@ -16,28 +16,6 @@ import random
 import json
 import openai
 
-def initialize_openai():
-    if "OPENAI_API_KEY" not in st.secrets:
-        st.error("OpenAI API key not found in secrets. Please add it to continue.")
-        st.stop()
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
-
-def chatbot(user_input, context):
-    try:
-        initialize_openai()  # Only initialize when the chatbot is used
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant for a flight price prediction app. You can answer questions about flights, travel to Italy, and using the app."},
-                {"role": "user", "content": f"Context: {context}\n\nUser question: {user_input}"}
-            ]
-        )
-        return response.choices[0].message['content']
-    except Exception as e:
-        logging.error(f"Error in chatbot function: {str(e)}")
-        return f"I'm sorry, I encountered an error: {str(e)}. Please try again later."
-
-
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -206,18 +184,10 @@ def plot_prices(df, title):
     return fig
 
 def format_best_days_table(best_days):
-    # Convert departure to datetime if it's not already
     best_days['departure'] = pd.to_datetime(best_days['departure'])
-    
-    # Format the date and add day of week
     best_days['Date'] = best_days['departure'].dt.strftime('%b %d, %Y (%a)')
-    
-    # Format the price
     best_days['Price'] = best_days['predicted_price'].apply(lambda x: f'${x:.2f}')
-    
-    # Select and rename columns
     result = best_days[['Date', 'Price']].rename(columns={'Price': 'Predicted Price'})
-    
     return result
 
 def validate_input(origin, destination, outbound_date):
@@ -229,9 +199,15 @@ def validate_input(origin, destination, outbound_date):
         return False
     return True
 
-# Add the chatbot function here, before the main() function
+def initialize_openai():
+    if "OPENAI_API_KEY" not in st.secrets:
+        st.error("OpenAI API key not found in secrets. Please add it to continue.")
+        st.stop()
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
+
 def chatbot(user_input, context):
     try:
+        initialize_openai()  # Only initialize when the chatbot is used
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -242,12 +218,18 @@ def chatbot(user_input, context):
         return response.choices[0].message['content']
     except Exception as e:
         logging.error(f"Error in chatbot function: {str(e)}")
-        return "I'm sorry, I encountered an error. Please try again later."
+        return f"I'm sorry, I encountered an error: {str(e)}. Please try again later."
 
-# Main Section
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
+
+    debug_mode = st.sidebar.checkbox("Debug Mode")
+
+    if debug_mode:
+        st.write("Debug mode enabled")
+        st.write(f"Streamlit version: {st.__version__}")
+        st.write(f"OpenAI version: {openai.__version__}")
 
     # User input
     col1, col2 = st.columns(2)
@@ -260,18 +242,39 @@ def main():
 
     if st.button("Predict Price"):
         if validate_input(origin, destination, travel_date):
-            with st.spinner("Fetching and processing data..."):
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+
+            def update_progress(progress, status):
+                progress_bar.progress(progress)
+                status_text.text(status)
+
+            try:
+                update_progress(0, "Initializing...")
+                
+                update_progress(10, "Loading data from GCS...")
                 df = load_data_from_gcs(origin, destination)
+                if debug_mode:
+                    st.write(f"Loaded data shape: {df.shape}")
+
+                update_progress(30, "Checking if API call is needed...")
                 if df.empty or should_call_api(origin, destination):
+                    update_progress(40, "Fetching new data from API...")
                     new_data = fetch_and_process_data(origin, destination, travel_date, travel_date + relativedelta(months=12))
                     df = pd.concat([df, new_data]).drop_duplicates().reset_index(drop=True)
+                    update_progress(50, "Saving updated data to GCS...")
                     save_data_to_gcs(df, origin, destination)
-                
+
+                update_progress(60, "Engineering features...")
                 df = engineer_features(df)
+
+                update_progress(70, "Training model...")
                 model, train_mae, test_mae = train_model(df)
-                
+
+                update_progress(80, "Predicting prices...")
                 future_prices = predict_prices(model, travel_date, travel_date + timedelta(days=30), origin, destination)
-                
+
+                update_progress(90, "Generating visualizations...")
                 st.write(f"Model performance - Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
                 
                 fig = plot_prices(future_prices, f"Predicted Prices for {origin} to {destination}")
@@ -281,14 +284,25 @@ def main():
                 st.write("Best days to fly in the next 30 days:")
                 st.table(format_best_days_table(best_days))
 
+                update_progress(100, "Completed!")
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
+                if debug_mode:
+                    st.exception(e)
+
     # Add chatbot section
     st.subheader("💬 Chat with our AI Assistant")
     user_input = st.text_input("Ask a question about flights, travel to Italy, or using this app:")
     if user_input:
-        with st.spinner("AI Assistant is thinking..."):
-            context = f"The user is using a flight price prediction app for travel to Italy in 2025. They can input origin and destination airport codes and select a date to predict flight prices."
-            response = chatbot(user_input, context)
-        st.write("AI Assistant:", response)
+        try:
+            with st.spinner("AI Assistant is thinking..."):
+                context = f"The user is using a flight price prediction app for travel to Italy in 2025. They can input origin and destination airport codes and select a date to predict flight prices."
+                response = chatbot(user_input, context)
+            st.write("AI Assistant:", response)
+        except Exception as e:
+            st.error(f"An error occurred with the AI Assistant: {str(e)}")
+            if debug_mode:
+                st.exception(e)
 
     # Display some general information about Italy
     st.subheader("🇮🇹 About Italy")
