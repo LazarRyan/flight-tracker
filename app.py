@@ -291,7 +291,6 @@ def validate_input(origin, destination, outbound_date, return_date=None):
         st.error("Return date must be after the outbound date.")
         return False
     return True
-
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
@@ -328,7 +327,7 @@ def main():
                 if api_data:
                     new_data = process_and_combine_data(api_data, existing_data, origin, destination, "one-way")
                     save_data_to_gcs(new_data, origin, destination, "one-way")
-                                    update_api_call_time(origin, destination)
+                    update_api_call_time(origin, destination)
                     existing_data = new_data
                     api_calls_made += 1
                     logging.info(f"Successfully fetched and processed new outbound flight data (Call {api_calls_made}/2).")
