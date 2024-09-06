@@ -71,13 +71,29 @@ def should_call_api(origin, destination):
     if not blob.exists():
         return True
     
-    last_call_time = datetime.fromisoformat(blob.download_as_text().strip())
-    return (datetime.now() - last_call_time) > timedelta(hours=12)
+    content = blob.download_as_text().strip()
+    try:
+        last_call_times = [datetime.fromisoformat(time.split('_')[1]) for time in content.split('\n') if '_' in time]
+        if last_call_times:
+            last_call_time = max(last_call_times)
+            return (datetime.now() - last_call_time) > timedelta(hours=12)
+        else:
+            return True
+    except ValueError:
+        logging.warning(f"Invalid datetime format in API call file for {origin} to {destination}. Allowing API call.")
+        return True
 
 def update_api_call_time(origin, destination):
     filename = get_api_call_filename(origin, destination)
     blob = bucket.blob(filename)
-    blob.upload_from_string(datetime.now().isoformat())
+    current_time = datetime.now().isoformat()
+    new_content = f"{datetime.now().date()}_{current_time}\n"
+    
+    if blob.exists():
+        existing_content = blob.download_as_text()
+        new_content = existing_content + new_content
+    
+    blob.upload_from_string(new_content)
 
 def fetch_and_process_data(origin, destination, start_date, end_date):
     try:
@@ -178,19 +194,23 @@ def main():
                 else:
                     st.info(f"No existing data found for {origin} to {destination}. Will fetch new data.")
 
-                if should_call_api(origin, destination):
-                    st.info("Fetching new data from API...")
-                    new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
-                    if not new_data.empty:
-                        existing_data = pd.concat([existing_data, new_data], ignore_index=True)
-                        existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
-                        save_data_to_gcs(existing_data, origin, destination)
-                        update_api_call_time(origin, destination)
-                        st.success(f"Data updated successfully. Total records: {len(existing_data)}")
+                try:
+                    if should_call_api(origin, destination):
+                        st.info("Fetching new data from API...")
+                        new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
+                        if not new_data.empty:
+                            existing_data = pd.concat([existing_data, new_data], ignore_index=True)
+                            existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+                            save_data_to_gcs(existing_data, origin, destination)
+                            update_api_call_time(origin, destination)
+                            st.success(f"Data updated successfully. Total records: {len(existing_data)}")
+                        else:
+                            st.warning("No new data fetched from API.")
                     else:
-                        st.warning("No new data fetched from API.")
-                else:
-                    st.info("Using cached data (API call limit reached for today).")
+                        st.info("Using cached data (API call limit reached for today).")
+                except Exception as e:
+                    st.warning(f"Error checking API call time: {str(e)}. Proceeding with existing data.")
+                    logging.error(f"Error checking API call time: {str(e)}")
 
                 if existing_data.empty:
                     st.error("No data available for prediction. Please try again with a different route or check your data source.")
