@@ -6,11 +6,13 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_absolute_error
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from amadeus import Client, ResponseError
 from google.cloud import storage
 from io import StringIO
 from google.oauth2 import service_account
 import logging
+import random
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -62,38 +64,47 @@ def save_data_to_gcs(df, origin, destination):
     logging.info(f"Saved {len(df)} records for {origin} to {destination}")
 
 def fetch_and_process_data(origin, destination, start_date, end_date):
-    try:
-        response = amadeus.shopping.flight_offers_search.get(
-            originLocationCode=origin,
-            destinationLocationCode=destination,
-            departureDate=start_date,
-            adults=1
-        )
-        data = response.data
-        if not data:
-            st.warning("No flight offers found for the specified route and dates.")
-            return pd.DataFrame()
-        
-        df = pd.DataFrame([{
-            'departure': offer['itineraries'][0]['segments'][0]['departure']['at'],
-            'price': float(offer['price']['total']),
-            'origin': origin,
-            'destination': destination
-        } for offer in data])
+    all_data = []
+    current_date = start_date
+    end_date = start_date + relativedelta(months=12)
+
+    while current_date < end_date:
+        month_end = current_date + relativedelta(months=1, days=-1)
+        sample_dates = [current_date + timedelta(days=random.randint(0, (month_end - current_date).days)) for _ in range(3)]
+
+        for sample_date in sample_dates:
+            try:
+                response = amadeus.shopping.flight_offers_search.get(
+                    originLocationCode=origin,
+                    destinationLocationCode=destination,
+                    departureDate=sample_date.strftime('%Y-%m-%d'),
+                    adults=1
+                )
+                data = response.data
+                if data:
+                    flight_data = {
+                        'departure': data[0]['itineraries'][0]['segments'][0]['departure']['at'],
+                        'price': float(data[0]['price']['total']),
+                        'origin': origin,
+                        'destination': destination
+                    }
+                    all_data.append(flight_data)
+                    logging.info(f"Fetched data for {origin} to {destination} on {sample_date}")
+                else:
+                    logging.warning(f"No data found for {origin} to {destination} on {sample_date}")
+            except ResponseError as error:
+                st.error(f"Error fetching data from Amadeus API: {error}")
+                logging.error(f"Error fetching data from Amadeus API: {error}")
+            except Exception as e:
+                st.error(f"An unexpected error occurred while fetching data: {str(e)}")
+                logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
+
+        current_date += relativedelta(months=1)
+
+    df = pd.DataFrame(all_data)
+    if not df.empty:
         df['departure'] = pd.to_datetime(df['departure'])
-        return df
-    except ResponseError as error:
-        st.error(f"Error fetching data from Amadeus API: {error}")
-        logging.error(f"Error fetching data from Amadeus API: {error}")
-        if error.response.status_code == 500:
-            st.warning("The Amadeus server encountered an internal error. This is not an issue with our application. Please try again later.")
-        else:
-            st.warning(f"An unexpected error occurred with status code: {error.response.status_code}")
-        return pd.DataFrame()
-    except Exception as e:
-        st.error(f"An unexpected error occurred while fetching data: {str(e)}")
-        logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
-        return pd.DataFrame()
+    return df
 
 def engineer_features(df):
     df['day_of_week'] = df['departure'].dt.dayofweek
