@@ -78,7 +78,12 @@ def should_call_api(origin, destination):
 
     route_key = f"{origin}-{destination}"
     if route_key in api_calls:
-        calls_today = api_calls[route_key].get(today.strftime("%Y-%m-%d"), 0)
+        if isinstance(api_calls[route_key], dict):
+            calls_today = api_calls[route_key].get(today.strftime("%Y-%m-%d"), 0)
+        else:
+            # If it's not a dict, it's probably the old format. Reset it.
+            api_calls[route_key] = {}
+            calls_today = 0
         if calls_today >= 2:
             return False, 0
         else:
@@ -147,6 +152,8 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
     api_calls = json.loads(content)
     route_key = f"{origin}-{destination}"
     today = datetime.now().date().strftime("%Y-%m-%d")
+    if route_key not in api_calls:
+        api_calls[route_key] = {}
     api_calls[route_key][today] = api_calls[route_key].get(today, 0) + calls_left
     blob.upload_from_string(json.dumps(api_calls), content_type="application/json")
 
