@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_absolute_error
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
@@ -100,16 +100,25 @@ def engineer_features(df):
     df['month'] = df['departure'].dt.month
     df['day'] = df['departure'].dt.day
     df['days_until_flight'] = (df['departure'] - datetime.now()).dt.days
+    df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
+    df['is_holiday'] = ((df['month'] == 12) & (df['day'].isin([24, 25, 31])) | 
+                        (df['month'] == 1) & (df['day'] == 1)).astype(int)
     return df
 
 def train_model(df):
-    features = ['day_of_week', 'month', 'day', 'days_until_flight']
+    features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday']
     X = df[features]
     y = df['price']
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    param_grid = {
+        'n_estimators': [100, 200],
+        'max_depth': [3, 4, 5],
+        'learning_rate': [0.01, 0.1]
+    }
+    
+    model = GridSearchCV(GradientBoostingRegressor(random_state=42), param_grid, cv=5)
     model.fit(X_train, y_train)
     
     train_predictions = model.predict(X_train)
@@ -118,19 +127,16 @@ def train_model(df):
     train_mae = mean_absolute_error(y_train, train_predictions)
     test_mae = mean_absolute_error(y_test, test_predictions)
     
-    return model, train_mae, test_mae
+    return model.best_estimator_, train_mae, test_mae
 
-def predict_prices(model, start_date, end_date, origin, destination, origins, destinations):
+def predict_prices(model, start_date, end_date, origin, destination):
     date_range = pd.date_range(start=start_date, end=end_date)
     future_data = pd.DataFrame({'departure': date_range})
-    future_data['day_of_week'] = future_data['departure'].dt.dayofweek
-    future_data['month'] = future_data['departure'].dt.month
-    future_data['day'] = future_data['departure'].dt.day
-    future_data['days_until_flight'] = (future_data['departure'] - datetime.now()).dt.days
+    future_data = engineer_features(future_data)
     future_data['origin'] = origin
     future_data['destination'] = destination
     
-    features = ['day_of_week', 'month', 'day', 'days_until_flight']
+    features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday']
     future_data['predicted_price'] = model.predict(future_data[features])
     
     return future_data
@@ -177,7 +183,7 @@ def main():
                     st.info(f"No existing data found for {origin} to {destination}. Will fetch new data.")
 
                 st.info("Fetching new data from API...")
-                new_data = fetch_and_process_data(origin, destination, outbound_date, outbound_date)
+                new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
                 if not new_data.empty:
                     existing_data = pd.concat([existing_data, new_data], ignore_index=True)
                     existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
@@ -200,8 +206,7 @@ def main():
 
                 logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
 
-                future_prices = predict_prices(model, datetime.now().date(), outbound_date, origin, destination, 
-                                               existing_data['origin'].unique(), existing_data['destination'].unique())
+                future_prices = predict_prices(model, datetime.now().date(), outbound_date, origin, destination)
 
                 st.subheader("📈 Predicted Prices")
                 fig = plot_prices(future_prices, f"Predicted Prices ({origin} to {destination})")
