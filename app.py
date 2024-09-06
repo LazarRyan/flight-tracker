@@ -13,6 +13,7 @@ from io import StringIO
 from google.oauth2 import service_account
 import logging
 import random
+import json
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -62,6 +63,34 @@ def save_data_to_gcs(df, origin, destination):
     blob = bucket.blob(filename)
     blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
     logging.info(f"Saved {len(df)} records for {origin} to {destination}")
+
+def should_call_api(origin, destination):
+    api_calls_file = "api_calls.json"
+    blob = bucket.blob(api_calls_file)
+    today = datetime.now().date()
+    
+    try:
+        content = blob.download_as_text()
+        api_calls = json.loads(content)
+    except Exception:
+        api_calls = {}
+
+    route_key = f"{origin}-{destination}"
+    if route_key in api_calls:
+        last_call_date = datetime.strptime(api_calls[route_key], "%Y-%m-%d").date()
+        if last_call_date == today:
+            return False
+
+    # Count unique routes called today
+    routes_called_today = sum(1 for date in api_calls.values() if date == today.strftime("%Y-%m-%d"))
+    if routes_called_today >= 2:
+        return False
+
+    # Update the API call time for this route
+    api_calls[route_key] = today.strftime("%Y-%m-%d")
+    blob.upload_from_string(json.dumps(api_calls), content_type="application/json")
+
+    return True
 
 def fetch_and_process_data(origin, destination, start_date, end_date):
     all_data = []
@@ -193,15 +222,18 @@ def main():
                 else:
                     st.info(f"No existing data found for {origin} to {destination}. Will fetch new data.")
 
-                st.info("Fetching new data from API...")
-                new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
-                if not new_data.empty:
-                    existing_data = pd.concat([existing_data, new_data], ignore_index=True)
-                    existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
-                    save_data_to_gcs(existing_data, origin, destination)
-                    st.success(f"Data updated successfully. Total records: {len(existing_data)}")
+                if should_call_api(origin, destination):
+                    st.info("Fetching new data from API...")
+                    new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
+                    if not new_data.empty:
+                        existing_data = pd.concat([existing_data, new_data], ignore_index=True)
+                        existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+                        save_data_to_gcs(existing_data, origin, destination)
+                        st.success(f"Data updated successfully. Total records: {len(existing_data)}")
+                    else:
+                        st.warning("Unable to fetch new data from API. Proceeding with existing data.")
                 else:
-                    st.warning("Unable to fetch new data from API. Proceeding with existing data.")
+                    st.info("API call limit reached for today. Using existing data.")
 
                 if existing_data.empty:
                     st.error("No data available for prediction. Please try again later or with a different route.")
