@@ -78,6 +78,18 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
     except ResponseError as error:
         st.error(f"Error fetching data from Amadeus API: {error}")
         logging.error(f"Error fetching data from Amadeus API: {error}")
+        if error.response.status_code == 500:
+            st.warning("The Amadeus server encountered an internal error. This is not an issue with our application. Please try again later.")
+        elif error.response.status_code == 400:
+            st.warning("The request to Amadeus API was invalid. Please check the input parameters.")
+        elif error.response.status_code == 401:
+            st.warning("Authentication failed with Amadeus API. Please check the API credentials.")
+        else:
+            st.warning(f"An unexpected error occurred with status code: {error.response.status_code}")
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"An unexpected error occurred while fetching data: {str(e)}")
+        logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
         return pd.DataFrame()
 
 def engineer_features(df):
@@ -134,7 +146,6 @@ def validate_input(origin, destination, outbound_date):
         st.error("Please select a future date for your outbound flight.")
         return False
     return True
-
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
@@ -169,10 +180,10 @@ def main():
                     save_data_to_gcs(existing_data, origin, destination)
                     st.success(f"Data updated successfully. Total records: {len(existing_data)}")
                 else:
-                    st.warning("No new data fetched from API.")
+                    st.warning("Unable to fetch new data from API. Proceeding with existing data.")
 
                 if existing_data.empty:
-                    st.error("No data available for prediction. Please try again with a different route or check your data source.")
+                    st.error("No data available for prediction. Please try again later or with a different route.")
                     return
 
                 st.success(f"Analyzing {len(existing_data)} records for your route.")
