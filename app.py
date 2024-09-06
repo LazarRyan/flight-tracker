@@ -327,7 +327,8 @@ def main():
                     new_data = fetch_and_process_data(origin, destination, travel_date, travel_date + relativedelta(months=12))
                     df = pd.concat([df, new_data]).drop_duplicates().reset_index(drop=True)
                     update_progress(50, "Saving updated data to GCS...")
-                    save_data_to_gcs(df, origin, destination)update_progress(60, "Engineering features...")
+                    save_data_to_gcs(df, origin, destination)
+		    update_progress(60, "Engineering features...")
                 df = engineer_features(df)
 
                 # Check data size and sample if necessary
@@ -340,7 +341,20 @@ def main():
                 if model is None:
                     st.stop()
 
-                update_progress(80, "Predicting prices...")
+                update_progress"Error in AI Assistant: {str(e)}")
+
+    st.subheader("🇮🇹 About Italy")
+    st.write("""
+    Italy is a country located in Southern Europe, known for its rich history, 
+    stunning architecture, delicious cuisine, and beautiful landscapes. 
+    Some popular destinations include Rome, Florence, Venice, and the Amalfi Coast.
+    """)
+
+    st.markdown("---")
+    st.markdown("Developed with ❤️ for Tanner & Jill's wedding")
+
+if __name__ == "__main__":
+    main()(80, "Predicting prices...")
                 future_prices = predict_prices(model, travel_date, travel_date + timedelta(days=30), origin, destination)
                 best_buy_days = predict_best_buy_days(model, travel_date, origin, destination)
 
