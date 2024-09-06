@@ -325,7 +325,7 @@ def main():
                 if df.empty or should_call_api(origin, destination):
                     update_progress(40, "Fetching new data from API...")
                     new_data = fetch_and_process_data(origin, destination, travel_date, travel_date + relativedelta(months=12))
-                    df = pd.concat([                df = pd.concat([df, new_data]).drop_duplicates().reset_index(drop=True)
+                    df = pd.concat([df = pd.concat([df, new_data]).drop_duplicates().reset_index(drop=True)
                     update_progress(50, "Saving updated data to GCS...")
                     save_data_to_gcs(df, origin, destination)
 
