@@ -15,6 +15,7 @@ import logging
 import random
 import json
 import openai
+import time
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -117,12 +118,17 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
                     logging.info(f"Fetched data for {origin} to {destination} on {sample_date}")
                 else:
                     logging.warning(f"No data found for {origin} to {destination} on {sample_date}")
+                
+                # Add a delay between API calls
+                time.sleep(1)  # 1 second delay
             except ResponseError as error:
                 st.error(f"Error fetching data from Amadeus API: {error}")
                 logging.error(f"Error fetching data from Amadeus API: {error}")
+                time.sleep(5)  # Longer delay on error
             except Exception as e:
                 st.error(f"An unexpected error occurred while fetching data: {str(e)}")
                 logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
+                time.sleep(5)  # Longer delay on error
 
         current_date += relativedelta(months=1)
 
@@ -194,6 +200,9 @@ def validate_input(origin, destination, outbound_date):
     if not origin or not destination:
         st.error("Please enter both origin and destination airport codes.")
         return False
+    if outbound_date.year < datetime.now().year:
+        st.error("Please select a future year for your outbound flight.")
+        return False
     if outbound_date <= datetime.now().date():
         st.error("Please select a future date for your outbound flight.")
         return False
@@ -224,21 +233,19 @@ def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
 
-    debug_mode = st.sidebar.checkbox("Debug Mode")
-
-    if debug_mode:
-        st.write("Debug mode enabled")
-        st.write(f"Streamlit version: {st.__version__}")
-        st.write(f"OpenAI version: {openai.__version__}")
-
     # User input
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         origin = st.text_input("Enter origin airport code (e.g., LAX):", "LAX")
     with col2:
         destination = st.text_input("Enter destination airport code in Italy (e.g., FCO):", "FCO")
-
-    travel_date = st.date_input("Select travel date:", min_value=datetime(2025, 1, 1), max_value=datetime(2025, 12, 31))
+    with col3:
+        travel_year = st.selectbox("Select travel year:", range(datetime.now().year, datetime.now().year + 3))
+    
+    travel_date = st.date_input("Select travel date:", 
+                                min_value=datetime(travel_year, 1, 1), 
+                                max_value=datetime(travel_year, 12, 31),
+                                value=datetime(travel_year, 6, 1))
 
     if st.button("Predict Price"):
         if validate_input(origin, destination, travel_date):
@@ -254,8 +261,6 @@ def main():
                 
                 update_progress(10, "Loading data from GCS...")
                 df = load_data_from_gcs(origin, destination)
-                if debug_mode:
-                    st.write(f"Loaded data shape: {df.shape}")
 
                 update_progress(30, "Checking if API call is needed...")
                 if df.empty or should_call_api(origin, destination):
@@ -287,8 +292,7 @@ def main():
                 update_progress(100, "Completed!")
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
-                if debug_mode:
-                    st.exception(e)
+                logging.error(f"Error in prediction process: {str(e)}")
 
     # Add chatbot section
     st.subheader("💬 Chat with our AI Assistant")
@@ -296,20 +300,19 @@ def main():
     if user_input:
         try:
             with st.spinner("AI Assistant is thinking..."):
-                context = f"The user is using a flight price prediction app for travel to Italy in 2025. They can input origin and destination airport codes and select a date to predict flight prices."
+                context = f"The user is using a flight price prediction app for travel to Italy in {travel_year}. They can input origin and destination airport codes and select a date to predict flight prices."
                 response = chatbot(user_input, context)
             st.write("AI Assistant:", response)
         except Exception as e:
             st.error(f"An error occurred with the AI Assistant: {str(e)}")
-            if debug_mode:
-                st.exception(e)
+            logging.error(f"Error in AI Assistant: {str(e)}")
 
     # Display some general information about Italy
     st.subheader("🇮🇹 About Italy")
     st.write("""
     Italy is a country located in Southern Europe, known for its rich history, 
     stunning architecture, delicious cuisine, and beautiful landscapes. 
-    Some popular destinations include Rome, Florence, Venice, and the Amalfi Coast.
+    Some popular destinations include Rome, Florence, Venice, and the Amlfi Coast.
     """)
 
     # Add a footer
