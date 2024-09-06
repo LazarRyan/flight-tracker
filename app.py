@@ -10,6 +10,10 @@ from amadeus import Client, ResponseError
 from google.cloud import storage
 from io import StringIO
 from google.oauth2 import service_account
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
@@ -58,40 +62,40 @@ def load_data_from_gcs(origin, destination, trip_type):
     blob = bucket.blob(filename)
     df = pd.DataFrame()
 
-    if blob.exists():
+    try:
         content = blob.download_as_text()
         df = pd.read_csv(StringIO(content))
         df['departure'] = pd.to_datetime(df['departure'])
-        if trip_type == "round-trip":
+        if trip_type == "round-trip" and 'return' in df.columns:
             df['return'] = pd.to_datetime(df['return'])
-    
-    if df.empty:
-        original_blob = bucket.blob("flight_prices.csv")
-        if original_blob.exists():
-            content = original_blob.download_as_text()
-            original_df = pd.read_csv(StringIO(content))
+        logging.info(f"Loaded {len(df)} records for {origin} to {destination} ({trip_type})")
+    except Exception as e:
+        logging.warning(f"No specific data file found for {origin} to {destination} ({trip_type}). Error: {str(e)}")
+        
+        # Try to load from the general flight_prices.csv
+        general_blob = bucket.blob("flight_prices.csv")
+        try:
+            content = general_blob.download_as_text()
+            general_df = pd.read_csv(StringIO(content))
+            general_df['departure'] = pd.to_datetime(general_df['departure'])
             
-            # Check if 'origin' and 'destination' columns exist
-            if 'origin' in original_df.columns and 'destination' in original_df.columns:
-                original_df['departure'] = pd.to_datetime(original_df['departure'])
-                df = original_df[(original_df['origin'] == origin) & (original_df['destination'] == destination)]
+            if 'origin' in general_df.columns and 'destination' in general_df.columns:
+                df = general_df[(general_df['origin'] == origin) & (general_df['destination'] == destination)]
                 
-                if trip_type == "round-trip":
-                    if 'return' in original_df.columns:
-                        df = df[df['return'].notna()]
-                        df['return'] = pd.to_datetime(df['return'])
-                    else:
-                        st.warning("Return flight data not available in the original dataset.")
-                else:
-                    if 'return' in original_df.columns:
-                        df = df[df['return'].isna()]
+                if trip_type == "round-trip" and 'return' in general_df.columns:
+                    df = df[df['return'].notna()]
+                    df['return'] = pd.to_datetime(df['return'])
+                elif trip_type == "one-way" and 'return' in general_df.columns:
+                    df = df[df['return'].isna()]
+                
+                logging.info(f"Loaded {len(df)} records from general data for {origin} to {destination} ({trip_type})")
             else:
-                st.warning("Origin and destination data not available in the original dataset.")
-    
+                logging.warning("Origin and destination data not available in the general dataset.")
+        except Exception as e:
+            logging.error(f"Failed to load general flight data. Error: {str(e)}")
+
     if df.empty:
-        st.warning(f"No existing data found for {origin} to {destination} ({trip_type})")
-    else:
-        st.success(f"Loaded {len(df)} records for {origin} to {destination} ({trip_type})")
+        logging.warning(f"No existing data found for {origin} to {destination} ({trip_type})")
     
     return df
 
@@ -111,7 +115,7 @@ def save_data_to_gcs(new_df, origin, destination, trip_type):
     blob = bucket.blob(filename)
     blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
     
-    st.success(f"Saved {len(combined_df)} records for {origin} to {destination} ({trip_type})")
+    logging.info(f"Saved {len(combined_df)} records for {origin} to {destination} ({trip_type})")
 
 def should_call_api(origin, destination):
     filename = get_api_call_filename(origin, destination)
@@ -157,7 +161,7 @@ def get_flight_offers(origin, destination, departure_date, return_date=None):
             )
         return response.data
     except ResponseError as error:
-        st.error(f"Error fetching flight data: {error}")
+        logging.error(f"Error fetching flight data: {error}")
         return []
 
 def fetch_data_for_months(origin, destination, start_date, end_date, trip_type):
@@ -312,9 +316,9 @@ def main():
             existing_data = load_data_from_gcs(origin, destination, trip_type)
 
             if existing_data.empty:
-                st.info(f"⚠️ No existing data found for {origin} to {destination}. Fetching new data from API.")
+                st.info("No existing data found. Fetching new data from API.")
             else:
-                st.success(f"✅ Loaded {len(existing_data)} existing records for {origin} to {destination}.")
+                st.success(f"Loaded existing records for analysis.")
 
             # Outbound flight API call
             api_calls_made = 0
@@ -324,12 +328,12 @@ def main():
                 if api_data:
                     new_data = process_and_combine_data(api_data, existing_data, origin, destination, "one-way")
                     save_data_to_gcs(new_data, origin, destination, "one-way")
-                    update_api_call_time(origin, destination)
+                                    update_api_call_time(origin, destination)
                     existing_data = new_data
                     api_calls_made += 1
-                    st.success(f"✅ Successfully fetched and processed new outbound flight data (Call {api_calls_made}/2).")
+                    logging.info(f"Successfully fetched and processed new outbound flight data (Call {api_calls_made}/2).")
                 else:
-                    st.warning(f"⚠️ No new data fetched from API for outbound flights on call {api_calls_made + 1}.")
+                    logging.warning(f"No new data fetched from API for outbound flights on call {api_calls_made + 1}.")
                     break
 
             # Return flight API call (for round-trips)
@@ -344,13 +348,13 @@ def main():
                         update_api_call_time(destination, origin)
                         existing_data = pd.concat([existing_data, return_new_data], ignore_index=True)
                         api_calls_made += 1
-                        st.success(f"✅ Successfully fetched and processed new return flight data (Call {api_calls_made}/2).")
+                        logging.info(f"Successfully fetched and processed new return flight data (Call {api_calls_made}/2).")
                     else:
-                        st.warning(f"⚠️ No new data fetched from API for return flights on call {api_calls_made + 1}.")
+                        logging.warning(f"No new data fetched from API for return flights on call {api_calls_made + 1}.")
                         break
 
             if not existing_data.empty:
-                st.success(f"📊 Total records for analysis: {len(existing_data)}")
+                logging.info(f"Total records for analysis: {len(existing_data)}")
 
                 with st.expander("View Sample Data"):
                     st.dataframe(existing_data.head())
@@ -358,7 +362,7 @@ def main():
                 df = engineer_features(existing_data, trip_type)
                 model, train_mae, test_mae = train_model(df)
 
-                st.info(f"🤖 Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
+                logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
 
                 if trip_type == "round-trip":
                     future_prices = predict_prices(model, outbound_date, return_date, origin, destination, existing_data['origin'].unique(), existing_data['destination'].unique(), trip_type)
@@ -383,7 +387,8 @@ def main():
                 st.metric(label=f"📊 {trip_type.capitalize()} Price Range", value=f"${price_range:.2f}")
 
             else:
-                st.error(f"❌ No data available for prediction for {origin} to {destination}. Please try again with a different route or check your data source.")
+                st.error("No data available for prediction. Please try again with a different route or check your data source.")
+                logging.error(f"No data available for prediction for {origin} to {destination}.")
 
 if __name__ == "__main__":
     main()
