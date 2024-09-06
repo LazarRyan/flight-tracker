@@ -182,6 +182,21 @@ def plot_prices(df, title):
     fig.update_layout(title=title, xaxis_title='Date', yaxis_title='Price ($)')
     return fig
 
+def format_best_days_table(best_days):
+    # Convert departure to datetime if it's not already
+    best_days['departure'] = pd.to_datetime(best_days['departure'])
+    
+    # Format the date and add day of week
+    best_days['Date'] = best_days['departure'].dt.strftime('%b %d, %Y (%a)')
+    
+    # Format the price
+    best_days['Price'] = best_days['predicted_price'].apply(lambda x: f'${x:.2f}')
+    
+    # Select and rename columns
+    result = best_days[['Date', 'Price']].rename(columns={'Price': 'Predicted Price'})
+    
+    return result
+
 def validate_input(origin, destination, outbound_date):
     if not origin or not destination:
         st.error("Please enter both origin and destination airport codes.")
@@ -251,8 +266,10 @@ def main():
                 st.plotly_chart(fig, use_container_width=True)
 
                 best_days = future_prices.nsmallest(5, 'predicted_price')
-                st.subheader("💰 Best Days to Book")
-                st.table(best_days[['departure', 'predicted_price']].set_index('departure').rename(columns={'predicted_price': 'Predicted Price ($)'}))
+		formatted_best_days = format_best_days_table(best_days)
+
+		st.subheader("💰 Best Days to Book")
+		st.table(formatted_best_days)
 
                 avg_price = future_prices['predicted_price'].mean()
                 st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
