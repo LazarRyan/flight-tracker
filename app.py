@@ -66,6 +66,25 @@ def save_data_to_gcs(new_df, origin, destination):
     
     logging.info(f"Saved {len(combined_df)} records for {origin} to {destination}")
 
+def get_last_api_call_time(origin, destination):
+    filename = f"last_api_call_{origin}_{destination}.txt"
+    blob = bucket.blob(filename)
+    if blob.exists():
+        return datetime.fromisoformat(blob.download_as_text().strip())
+    return None
+
+def update_api_call_time(origin, destination):
+    filename = f"last_api_call_{origin}_{destination}.txt"
+    blob = bucket.blob(filename)
+    blob.upload_from_string(datetime.now().isoformat())
+
+def should_call_api(origin, destination):
+    last_call_time = get_last_api_call_time(origin, destination)
+    if last_call_time is None:
+        return True
+    time_since_last_call = datetime.now() - last_call_time
+    return time_since_last_call.total_seconds() >= 12 * 3600  # 12 hours in seconds
+
 def get_flight_offers(origin, destination, departure_date):
     try:
         response = amadeus.shopping.flight_offers_search.get(
@@ -196,15 +215,22 @@ def main():
         with st.spinner("Loading data and making predictions..."):
             existing_data = load_data_from_gcs(origin, destination)
 
-            if existing_data.empty:
-                st.info("No existing data found. Fetching new data from API.")
+            api_calls_made = 0
+            while should_call_api(origin, destination) and api_calls_made < 2:
+                st.info(f"Fetching new data from API (Call {api_calls_made + 1}/2)...")
                 api_data = fetch_data_for_months(origin, destination, datetime.now().date(), outbound_date)
                 if api_data:
                     existing_data = process_and_combine_data(api_data, existing_data, origin, destination)
                     save_data_to_gcs(existing_data, origin, destination)
+                    update_api_call_time(origin, destination)
+                    api_calls_made += 1
                 else:
-                    st.error("Unable to fetch data from API. Please try again later.")
-                    return
+                    st.warning(f"No new data fetched from API on call {api_calls_made + 1}.")
+                    break
+
+            if existing_data.empty:
+                st.error("No data available for prediction. Please try again with a different route or check your data source.")
+                return
 
             st.success(f"Analyzing {len(existing_data)} records for your route.")
 
