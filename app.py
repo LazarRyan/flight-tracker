@@ -327,7 +327,8 @@ def main():
                     new_data = fetch_and_process_data(origin, destination, travel_date, travel_date + relativedelta(months=12))
                     df = pd.concat([df, new_data]).drop_duplicates().reset_index(drop=True)
                     update_progress(50, "Saving updated data to GCS...")
-                    save_data_to_gcs(df, origin, destination)                update_progress(60, "Engineering features...")
+                    save_data_to_gcs(df, origin, destination)               
+		    update_progress(60, "Engineering features...")
                 df = engineer_features(df)
 
                 # Check data size and sample if necessary
