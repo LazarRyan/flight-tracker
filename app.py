@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_absolute_error
 import plotly.graph_objects as go
@@ -16,7 +15,14 @@ import random
 import json
 import openai
 import time
-import xgboost as xgb
+
+try:
+    import xgboost as xgb
+    use_xgb = True
+except ImportError:
+    from sklearn.ensemble import GradientBoostingRegressor
+    use_xgb = False
+    st.warning("XGBoost not available. Using sklearn's GradientBoostingRegressor instead.")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -84,7 +90,6 @@ def should_call_api(origin, destination):
         if now - last_call_time < timedelta(hours=12):
             return False
 
-    # Update the API call time for this route
     api_calls[route_key] = now.isoformat()
     blob.upload_from_string(json.dumps(api_calls), content_type="application/json")
 
@@ -114,7 +119,7 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
                         'price': float(data[0]['price']['total']),
                         'origin': origin,
                         'destination': destination,
-                        'query_date': datetime.now().strftime('%Y-%m-%d')  # Add this line
+                        'query_date': datetime.now().strftime('%Y-%m-%d')
                     }
                     all_data.append(flight_data)
                     logging.info(f"Fetched data for {origin} to {destination} on {sample_date}")
@@ -148,7 +153,6 @@ def engineer_features(df):
     df['is_holiday'] = ((df['month'] == 12) & (df['day'].isin([24, 25, 31])) | 
                         (df['month'] == 1) & (df['day'] == 1)).astype(int)
     
-    # Add query_date if it doesn't exist (for prediction data)
     if 'query_date' not in df.columns:
         df['query_date'] = datetime.now()
     else:
@@ -157,12 +161,24 @@ def engineer_features(df):
     df['days_until_departure'] = (df['departure'] - df['query_date']).dt.days
     return df
 
+@st.cache_data
+def train_model_with_retry(df, origin, destination, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            return train_model(df, origin, destination)
+        except Exception as e:
+            if attempt < max_retries - 1:
+                st.warning(f"An error occurred during model training (attempt {attempt + 1}). Retrying...")
+                time.sleep(2)  # Wait for 2 seconds before retrying
+            else:
+                st.error(f"Failed to train model after {max_retries} attempts. Error: {str(e)}")
+                return None, None, None
+
 def train_model(df, origin, destination):
     features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday', 'days_until_departure']
     X = df[features]
     y = df['price']
     
-    # Add origin and destination as categorical features
     X['origin'] = origin
     X['destination'] = destination
     X = pd.get_dummies(X, columns=['origin', 'destination'], drop_first=True)
@@ -170,16 +186,40 @@ def train_model(df, origin, destination):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
     param_grid = {
-        'n_estimators': [100, 200],
-        'max_depth': [3, 4, 5],
-        'learning_rate': [0.01, 0.1],
-        'subsample': [0.8, 1.0],
-        'colsample_bytree': [0.8, 1.0]
+        'n_estimators': [100],
+        'max_depth': [3, 5],
+        'learning_rate': [0.1]
     }
     
-    model = xgb.XGBRegressor(random_state=42)
-    grid_search = GridSearchCV(model, param_grid, cv=5, n_jobs=-1, verbose=1)
-    grid_search.fit(X_train, y_train)
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    def update_progress(iteration, total, description):
+        progress = int(100 * iteration / total)
+        progress_bar.progress(progress)
+        status_text.text(f"{description}: {progress}% complete")
+    
+    if use_xgb:
+        class ProgressCallback(xgb.callback.TrainingCallback):
+            def __init__(self, total_iterations):
+                self.total_iterations = total_iterations
+                self.current_iteration = 0
+            
+            def after_iteration(self, model, epoch, evals_log):
+                self.current_iteration += 1
+                update_progress(self.current_iteration, self.total_iterations, "Training model")
+                return False
+        
+        total_iterations = param_grid['n_estimators'][0] * len(param_grid['max_depth']) * len(param_grid['learning_rate']) * 3  # 3 for cv
+        callback = ProgressCallback(total_iterations)
+        
+        model = xgb.XGBRegressor(random_state=42)
+        grid_search = GridSearchCV(model, param_grid, cv=3, n_jobs=-1, verbose=0)
+        grid_search.fit(X_train, y_train, callbacks=[callback])
+    else:
+        model = GradientBoostingRegressor(random_state=42)
+        grid_search = GridSearchCV(model, param_grid, cv=3, n_jobs=-1, verbose=0)
+        grid_search.fit(X_train, y_train)
     
     best_model = grid_search.best_estimator_
     
@@ -202,12 +242,13 @@ def predict_prices(model, start_date, end_date, origin, destination):
     features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday', 'days_until_departure', 'origin', 'destination']
     future_data_encoded = pd.get_dummies(future_data[features], columns=['origin', 'destination'], drop_first=True)
     
-    # Ensure all columns from training are present
-    for col in model.feature_names_:
-        if col not in future_data_encoded.columns:
-            future_data_encoded[col] = 0
+    if use_xgb:
+        for col in model.feature_names_:
+            if col not in future_data_encoded.columns:
+                future_data_encoded[col] = 0
+        future_data_encoded = future_data_encoded[model.feature_names_]
     
-    future_data['predicted_price'] = model.predict(future_data_encoded[model.feature_names_])
+    future_data['predicted_price'] = model.predict(future_data_encoded)
     
     return future_data
 
@@ -222,11 +263,13 @@ def predict_best_buy_days(model, travel_date, origin, destination):
     features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday', 'days_until_departure', 'origin', 'destination']
     buy_data_encoded = pd.get_dummies(buy_data[features], columns=['origin', 'destination'], drop_first=True)
     
-    for col in model.feature_names_:
-        if col not in buy_data_encoded.columns:
-            buy_data_encoded[col] = 0
+    if use_xgb:
+        for col in model.feature_names_:
+            if col not in buy_data_encoded.columns:
+                buy_data_encoded[col] = 0
+        buy_data_encoded = buy_data_encoded[model.feature_names_]
     
-    buy_data['predicted_price'] = model.predict(buy_data_encoded[model.feature_names_])
+    buy_data['predicted_price'] = model.predict(buy_data_encoded)
     
     return buy_data.nsmallest(5, 'predicted_price')
 
@@ -276,22 +319,20 @@ def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
 
-    # User input
     col1, col2 = st.columns(2)
     with col1:
         origin = st.text_input("Enter origin airport code (e.g., LAX):", "EWR")
     with col2:
         destination = st.text_input("Enter destination airport code in Italy (e.g., FCO):", "FCO")
 
-    # Set min_date to current date
     min_date = datetime.now().date()
     max_date = datetime(2025, 12, 31).date()
     default_date = datetime(2025, 6, 1).date()
 
     travel_date = st.date_input("Select travel date:", 
-                                min_value=min_date,
-                                max_value=max_date,
-                                value=default_date)
+                                                    min_value=min_date,
+                    max_value=max_date,
+                    value=default_date)
 
     if st.button("Predict Price"):
         if validate_input(origin, destination, travel_date):
@@ -319,8 +360,14 @@ def main():
                 update_progress(60, "Engineering features...")
                 df = engineer_features(df)
 
+                if len(df) > 10000:
+                    df = df.sample(n=10000, random_state=42)
+                    st.info("Using a subset of the data for model training due to performance constraints.")
+
                 update_progress(70, "Training model...")
-                model, train_mae, test_mae = train_model(df, origin, destination)
+                model, train_mae, test_mae = train_model_with_retry(df, origin, destination)
+                if model is None:
+                    st.stop()
 
                 update_progress(80, "Predicting prices...")
                 future_prices = predict_prices(model, travel_date, travel_date + timedelta(days=30), origin, destination)
@@ -343,7 +390,6 @@ def main():
                 st.error(f"An error occurred: {str(e)}")
                 logging.error(f"Error in prediction process: {str(e)}")
 
-    # Add chatbot section
     st.subheader("💬 Chat with our AI Assistant")
     user_input = st.text_input("Ask a question about flights, travel to Italy, or using this app:")
     if user_input:
@@ -356,7 +402,6 @@ def main():
             st.error(f"An error occurred with the AI Assistant: {str(e)}")
             logging.error(f"Error in AI Assistant: {str(e)}")
 
-    # Display some general information about Italy
     st.subheader("🇮🇹 About Italy")
     st.write("""
     Italy is a country located in Southern Europe, known for its rich history, 
@@ -364,7 +409,6 @@ def main():
     Some popular destinations include Rome, Florence, Venice, and the Amalfi Coast.
     """)
 
-    # Add a footer
     st.markdown("---")
     st.markdown("Developed with ❤️ for Tanner & Jill's wedding")
 
