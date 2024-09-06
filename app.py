@@ -70,15 +70,23 @@ def load_data_from_gcs(origin, destination, trip_type):
         if original_blob.exists():
             content = original_blob.download_as_text()
             original_df = pd.read_csv(StringIO(content))
-            original_df['departure'] = pd.to_datetime(original_df['departure'])
             
-            df = original_df[(original_df['origin'] == origin) & (original_df['destination'] == destination)]
-            
-            if trip_type == "round-trip":
-                df = df[df['return'].notna()]
-                df['return'] = pd.to_datetime(df['return'])
+            # Check if 'origin' and 'destination' columns exist
+            if 'origin' in original_df.columns and 'destination' in original_df.columns:
+                original_df['departure'] = pd.to_datetime(original_df['departure'])
+                df = original_df[(original_df['origin'] == origin) & (original_df['destination'] == destination)]
+                
+                if trip_type == "round-trip":
+                    if 'return' in original_df.columns:
+                        df = df[df['return'].notna()]
+                        df['return'] = pd.to_datetime(df['return'])
+                    else:
+                        st.warning("Return flight data not available in the original dataset.")
+                else:
+                    if 'return' in original_df.columns:
+                        df = df[df['return'].isna()]
             else:
-                df = df[df['return'].isna()]
+                st.warning("Origin and destination data not available in the original dataset.")
     
     if df.empty:
         st.warning(f"No existing data found for {origin} to {destination} ({trip_type})")
