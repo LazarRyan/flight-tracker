@@ -52,19 +52,13 @@ def load_data_from_gcs(origin, destination):
 
     return df
 
-def save_data_to_gcs(new_df, origin, destination):
+def save_data_to_gcs(df, origin, destination):
     filename = get_data_filename(origin, destination)
-    existing_df = load_data_from_gcs(origin, destination)
-    
-    combined_df = pd.concat([existing_df, new_df], ignore_index=True)
-    combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
-    
     csv_buffer = StringIO()
-    combined_df.to_csv(csv_buffer, index=False)
+    df.to_csv(csv_buffer, index=False)
     blob = bucket.blob(filename)
     blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
-    
-    logging.info(f"Saved {len(combined_df)} records for {origin} to {destination}")
+    logging.info(f"Saved {len(df)} records for {origin} to {destination}")
 
 def get_last_api_call_time(origin, destination):
     filename = f"last_api_call_{origin}_{destination}.txt"
@@ -99,7 +93,7 @@ def get_flight_offers(origin, destination, departure_date):
         logging.error(f"Error fetching flight data: {error}")
         return []
 
-def fetch_data_for_months(origin, destination, start_date, end_date):
+def fetch_and_process_data(origin, destination, start_date, end_date):
     all_data = []
     current_date = start_date
     progress_bar = st.progress(0)
@@ -107,33 +101,22 @@ def fetch_data_for_months(origin, destination, start_date, end_date):
 
     for i in range(total_days):
         offers = get_flight_offers(origin, destination, current_date)
-        all_data.extend(offers)
+        for offer in offers:
+            outbound = offer['itineraries'][0]
+            price = float(offer['price']['total'])
+            departure = outbound['segments'][0]['departure']['at']
+            all_data.append({
+                'departure': departure,
+                'price': price,
+                'origin': origin,
+                'destination': destination
+            })
         current_date += timedelta(days=1)
         progress_bar.progress((i + 1) / total_days)
 
-    return all_data
-
-def process_and_combine_data(api_data, existing_data, origin, destination):
-    new_data = []
-    for offer in api_data:
-        outbound = offer['itineraries'][0]
-        price = float(offer['price']['total'])
-        departure = outbound['segments'][0]['departure']['at']
-        
-        new_data.append({
-            'departure': departure,
-            'price': price,
-            'origin': origin,
-            'destination': destination
-        })
-    
-    new_df = pd.DataFrame(new_data)
+    new_df = pd.DataFrame(all_data)
     new_df['departure'] = pd.to_datetime(new_df['departure'])
-
-    combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-    combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
-    
-    return combined_df
+    return new_df
 
 def engineer_features(df):
     df['day_of_week'] = df['departure'].dt.dayofweek
@@ -215,15 +198,24 @@ def main():
         with st.spinner("Loading data and making predictions..."):
             existing_data = load_data_from_gcs(origin, destination)
 
+            if not existing_data.empty:
+                most_recent_data = existing_data['departure'].max()
+                if most_recent_data >= datetime.now().date():
+                    st.success(f"Using existing data (last updated: {most_recent_data.date()})")
+                else:
+                    st.info(f"Existing data found, but it's outdated (last entry: {most_recent_data.date()}). Checking for updates...")
+
             api_calls_made = 0
             while should_call_api(origin, destination) and api_calls_made < 2:
                 st.info(f"Fetching new data from API (Call {api_calls_made + 1}/2)...")
-                api_data = fetch_data_for_months(origin, destination, datetime.now().date(), outbound_date)
-                if api_data:
-                    existing_data = process_and_combine_data(api_data, existing_data, origin, destination)
+                new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
+                if not new_data.empty:
+                    existing_data = pd.concat([existing_data, new_data], ignore_index=True)
+                    existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
                     save_data_to_gcs(existing_data, origin, destination)
                     update_api_call_time(origin, destination)
                     api_calls_made += 1
+                    st.success(f"Data updated successfully. Total records: {len(existing_data)}")
                 else:
                     st.warning(f"No new data fetched from API on call {api_calls_made + 1}.")
                     break
