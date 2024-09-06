@@ -266,10 +266,9 @@ def main():
                 st.plotly_chart(fig, use_container_width=True)
 
                 best_days = future_prices.nsmallest(5, 'predicted_price')
-		formatted_best_days = format_best_days_table(best_days)
-
-		st.subheader("💰 Best Days to Book")
-		st.table(formatted_best_days)
+                formatted_best_days = format_best_days_table(best_days)
+                st.subheader("💰 Best Days to Book")
+                st.table(formatted_best_days)
 
                 avg_price = future_prices['predicted_price'].mean()
                 st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
