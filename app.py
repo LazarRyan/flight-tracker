@@ -51,14 +51,11 @@ def initialize_clients():
 
 amadeus, bucket = initialize_clients()
 
-def get_data_filename(origin, destination, trip_type):
-    return f"flight_prices_{origin}_{destination}_{trip_type}.csv"
-
-def get_api_call_filename(origin, destination):
-    return f"api_calls_{origin}_{destination}.txt"
+def get_data_filename(origin, destination):
+    return f"flight_prices_{origin}_{destination}.csv"
 
 def load_data_from_gcs(origin, destination, trip_type):
-    filename = get_data_filename(origin, destination, trip_type)
+    filename = get_data_filename(origin, destination)
     blob = bucket.blob(filename)
     df = pd.DataFrame()
 
@@ -66,56 +63,42 @@ def load_data_from_gcs(origin, destination, trip_type):
         content = blob.download_as_text()
         df = pd.read_csv(StringIO(content))
         df['departure'] = pd.to_datetime(df['departure'])
-        if trip_type == "round-trip" and 'return' in df.columns:
+        if 'return' in df.columns:
             df['return'] = pd.to_datetime(df['return'])
+        
+        # Filter based on trip type
+        if trip_type == "round-trip":
+            df = df[df['return'].notna()]
+        else:
+            df = df[df['return'].isna()]
+        
         logging.info(f"Loaded {len(df)} records for {origin} to {destination} ({trip_type})")
     except Exception as e:
-        logging.warning(f"No specific data file found for {origin} to {destination} ({trip_type}). Error: {str(e)}")
-        
-        # Try to load from the general flight_prices.csv
-        general_blob = bucket.blob("flight_prices.csv")
-        try:
-            content = general_blob.download_as_text()
-            general_df = pd.read_csv(StringIO(content))
-            general_df['departure'] = pd.to_datetime(general_df['departure'])
-            
-            if 'origin' in general_df.columns and 'destination' in general_df.columns:
-                df = general_df[(general_df['origin'] == origin) & (general_df['destination'] == destination)]
-                
-                if trip_type == "round-trip" and 'return' in general_df.columns:
-                    df = df[df['return'].notna()]
-                    df['return'] = pd.to_datetime(df['return'])
-                elif trip_type == "one-way" and 'return' in general_df.columns:
-                    df = df[df['return'].isna()]
-                
-                logging.info(f"Loaded {len(df)} records from general data for {origin} to {destination} ({trip_type})")
-            else:
-                logging.warning("Origin and destination data not available in the general dataset.")
-        except Exception as e:
-            logging.error(f"Failed to load general flight data. Error: {str(e)}")
+        logging.warning(f"No data file found for {origin} to {destination}. Error: {str(e)}")
 
     if df.empty:
         logging.warning(f"No existing data found for {origin} to {destination} ({trip_type})")
     
     return df
 
-def save_data_to_gcs(new_df, origin, destination, trip_type):
-    filename = get_data_filename(origin, destination, trip_type)
-    existing_df = load_data_from_gcs(origin, destination, trip_type)
+def save_data_to_gcs(new_df, origin, destination):
+    filename = get_data_filename(origin, destination)
+    existing_df = load_data_from_gcs(origin, destination, "all")  # Load all data
     
     combined_df = pd.concat([existing_df, new_df], ignore_index=True)
     
-    if trip_type == "round-trip":
-        combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'return', 'origin', 'destination'], keep='last')
-    else:
-        combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+    # Remove duplicates, keeping the latest entry
+    combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'return', 'origin', 'destination'], keep='last')
     
     csv_buffer = StringIO()
     combined_df.to_csv(csv_buffer, index=False)
     blob = bucket.blob(filename)
     blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
     
-    logging.info(f"Saved {len(combined_df)} records for {origin} to {destination} ({trip_type})")
+    logging.info(f"Saved {len(combined_df)} records for {origin} to {destination}")
+
+def get_api_call_filename(origin, destination):
+    return f"api_calls_{origin}_{destination}.txt"
 
 def should_call_api(origin, destination):
     filename = get_api_call_filename(origin, destination)
@@ -181,45 +164,36 @@ def fetch_data_for_months(origin, destination, start_date, end_date, trip_type):
         progress_bar.progress((i + 1) / total_days)
 
     return all_data
-
 def process_and_combine_data(api_data, existing_data, origin, destination, trip_type):
     new_data = []
     for offer in api_data:
         outbound = offer['itineraries'][0]
-        if trip_type == "round-trip":
+        price = float(offer['price']['total'])
+        departure = outbound['segments'][0]['departure']['at']
+        
+        if trip_type == "round-trip" and len(offer['itineraries']) > 1:
             inbound = offer['itineraries'][1]
-            new_data.append({
-                'departure': outbound['segments'][0]['departure']['at'],
-                'return': inbound['segments'][0]['departure']['at'],
-                'price': float(offer['price']['total']),
-                'origin': origin,
-                'destination': destination
-            })
+            return_date = inbound['segments'][0]['departure']['at']
         else:
-            new_data.append({
-                'departure': outbound['segments'][0]['departure']['at'],
-                'price': float(offer['price']['total']),
-                'origin': origin,
-                'destination': destination
-            })
+            return_date = None
+        
+        new_data.append({
+            'departure': departure,
+            'return': return_date,
+            'price': price,
+            'origin': origin,
+            'destination': destination
+        })
     
     new_df = pd.DataFrame(new_data)
     new_df['departure'] = pd.to_datetime(new_df['departure'])
-    if trip_type == "round-trip":
+    if 'return' in new_df.columns:
         new_df['return'] = pd.to_datetime(new_df['return'])
 
     combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-    if trip_type == "round-trip":
-        combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'return', 'origin', 'destination'], keep='last')
-    else:
-        combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+    combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'return', 'origin', 'destination'], keep='last')
     
-    cutoff_date = datetime.now() - timedelta(days=365)
-    combined_df = combined_df[
-        (combined_df['departure'] >= cutoff_date) |
-        (combined_df['departure'] >= datetime.now())
-    ]
-    return combined_df.sort_values('departure')
+    return combined_df
 
 def engineer_features(df, trip_type):
     df['day_of_week'] = df['departure'].dt.dayofweek
@@ -291,6 +265,7 @@ def validate_input(origin, destination, outbound_date, return_date=None):
         st.error("Return date must be after the outbound date.")
         return False
     return True
+
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
@@ -319,38 +294,24 @@ def main():
             else:
                 st.success(f"Loaded existing records for analysis.")
 
-            # Outbound flight API call
+            # Fetch new data (for both one-way and round-trip)
             api_calls_made = 0
             while should_call_api(origin, destination) and api_calls_made < 2:
-                with st.spinner(f"Fetching new data for outbound flights (Call {api_calls_made + 1}/2)..."):
-                    api_data = fetch_data_for_months(origin, destination, outbound_date, outbound_date + timedelta(days=30), "one-way")
+                with st.spinner(f"Fetching new data for flights (Call {api_calls_made + 1}/2)..."):
+                    if trip_type == "round-trip":
+                        api_data = fetch_data_for_months(origin, destination, outbound_date, return_date, "round-trip")
+                    else:
+                        api_data = fetch_data_for_months(origin, destination, outbound_date, outbound_date + timedelta(days=30), "one-way")
                 if api_data:
-                    new_data = process_and_combine_data(api_data, existing_data, origin, destination, "one-way")
-                    save_data_to_gcs(new_data, origin, destination, "one-way")
+                    new_data = process_and_combine_data(api_data, existing_data, origin, destination, trip_type)
+                    save_data_to_gcs(new_data, origin, destination)
                     update_api_call_time(origin, destination)
                     existing_data = new_data
                     api_calls_made += 1
-                    logging.info(f"Successfully fetched and processed new outbound flight data (Call {api_calls_made}/2).")
+                    logging.info(f"Successfully fetched and processed new flight data (Call {api_calls_made}/2).")
                 else:
-                    logging.warning(f"No new data fetched from API for outbound flights on call {api_calls_made + 1}.")
+                    logging.warning(f"No new data fetched from API for flights on call {api_calls_made + 1}.")
                     break
-
-            # Return flight API call (for round-trips)
-            if trip_type == "round-trip":
-                api_calls_made = 0
-                while should_call_api(destination, origin) and api_calls_made < 2:
-                    with st.spinner(f"Fetching new data for return flights (Call {api_calls_made + 1}/2)..."):
-                        return_api_data = fetch_data_for_months(destination, origin, return_date, return_date + timedelta(days=30), "one-way")
-                    if return_api_data:
-                        return_new_data = process_and_combine_data(return_api_data, existing_data, destination, origin, "one-way")
-                        save_data_to_gcs(return_new_data, destination, origin, "one-way")
-                        update_api_call_time(destination, origin)
-                        existing_data = pd.concat([existing_data, return_new_data], ignore_index=True)
-                        api_calls_made += 1
-                        logging.info(f"Successfully fetched and processed new return flight data (Call {api_calls_made}/2).")
-                    else:
-                        logging.warning(f"No new data fetched from API for return flights on call {api_calls_made + 1}.")
-                        break
 
             if not existing_data.empty:
                 logging.info(f"Total records for analysis: {len(existing_data)}")
