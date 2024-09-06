@@ -15,7 +15,7 @@ import random
 import json
 import openai
 import time
-import xboost as xbg
+import xgboost as xgb
 from sklearn.ensemble import GradientBoostingRegressor
 
 # Set up logging
