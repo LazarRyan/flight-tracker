@@ -38,7 +38,7 @@ def get_data_filename(origin, destination):
     return f"flight_prices_{origin}_{destination}.csv"
 
 def load_data_from_gcs(origin, destination):
-    filename = get_data_filename(origin, destination)
+    filename = f"flight_prices_{origin}_{destination}.csv"
     blob = bucket.blob(filename)
     df = pd.DataFrame()
 
@@ -50,7 +50,7 @@ def load_data_from_gcs(origin, destination):
     except Exception as e:
         logging.warning(f"Error loading data for {origin} to {destination}: {str(e)}")
 
-    return df
+    return df, blob.updated
 
 def save_data_to_gcs(df, origin, destination):
     filename = get_data_filename(origin, destination)
@@ -200,16 +200,19 @@ def main():
                 existing_data = load_data_from_gcs(origin, destination)
 
                 if not existing_data.empty:
-                    try:
-                        most_recent_data = existing_data['departure'].max()
-                        if most_recent_data.date() >= datetime.now().date():
-                            st.success(f"Using existing data (last updated: {most_recent_data.date()})")
-                        else:
-                            st.info(f"Existing data found, but it's outdated (last entry: {most_recent_data.date()}). Checking for updates...")
-                    except Exception as e:
-                        st.warning(f"Error processing existing data: {str(e)}. Will attempt to fetch new data.")
-                        logging.error(f"Error processing existing data: {str(e)}")
-                        existing_data = pd.DataFrame()  # Reset to empty DataFrame if there's an error
+    		    try:
+        		most_recent_data = existing_data['departure'].max()
+        		oldest_data = existing_data['departure'].min()
+        
+        		st.success(f"Using existing data (last updated: {last_modified.strftime('%Y-%m-%d %H:%M:%S')})")
+        		st.info(f"Data range: {oldest_data.date()} to {most_recent_data.date()}")
+        		st.info(f"Total records: {len(existing_data)}")
+    		    except Exception as e:
+        		st.warning(f"Error processing existing data: {str(e)}. Will attempt to fetch new data.")
+        		logging.error(f"Error processing existing data: {str(e)}")
+        		existing_data = pd.DataFrame()  # Reset to empty DataFrame if there's an error
+	        else:
+    		   st.info("No existing data found. Will fetch new data.")
 
                 api_calls_made = 0
                 while should_call_api(origin, destination) and api_calls_made < 2:
