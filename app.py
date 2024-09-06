@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
@@ -161,19 +161,6 @@ def engineer_features(df):
     df['days_until_departure'] = (df['departure'] - df['query_date']).dt.days
     return df
 
-@st.cache_data
-def train_model_with_retry(df, origin, destination, max_retries=3):
-    for attempt in range(max_retries):
-        try:
-            return train_model(df, origin, destination)
-        except Exception as e:
-            if attempt < max_retries - 1:
-                st.warning(f"An error occurred during model training (attempt {attempt + 1}). Retrying...")
-                time.sleep(2)  # Wait for 2 seconds before retrying
-            else:
-                st.error(f"Failed to train model after {max_retries} attempts. Error: {str(e)}")
-                return None, None, None
-
 def train_model(df, origin, destination):
     features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday', 'days_until_departure']
     X = df[features]
@@ -185,51 +172,36 @@ def train_model(df, origin, destination):
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    param_grid = {
-        'n_estimators': [100],
-        'max_depth': [3, 5],
-        'learning_rate': [0.1]
-    }
-    
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    def update_progress(iteration, total, description):
-        progress = int(100 * iteration / total)
-        progress_bar.progress(progress)
-        status_text.text(f"{description}: {progress}% complete")
-    
     if use_xgb:
-        class ProgressCallback(xgb.callback.TrainingCallback):
-            def __init__(self, total_iterations):
-                self.total_iterations = total_iterations
-                self.current_iteration = 0
-            
-            def after_iteration(self, model, epoch, evals_log):
-                self.current_iteration += 1
-                update_progress(self.current_iteration, self.total_iterations, "Training model")
-                return False
-        
-        total_iterations = param_grid['n_estimators'][0] * len(param_grid['max_depth']) * len(param_grid['learning_rate']) * 3  # 3 for cv
-        callback = ProgressCallback(total_iterations)
-        
-        model = xgb.XGBRegressor(random_state=42)
-        grid_search = GridSearchCV(model, param_grid, cv=3, n_jobs=-1, verbose=0)
-        grid_search.fit(X_train, y_train, callbacks=[callback])
+        model = xgb.XGBRegressor(n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42)
     else:
-        model = GradientBoostingRegressor(random_state=42)
-        grid_search = GridSearchCV(model, param_grid, cv=3, n_jobs=-1, verbose=0)
-        grid_search.fit(X_train, y_train)
+        model = GradientBoostingRegressor(n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42)
     
-    best_model = grid_search.best_estimator_
+    model.fit(X_train, y_train)
     
-    train_predictions = best_model.predict(X_train)
-    test_predictions = best_model.predict(X_test)
+    train_predictions = model.predict(X_train)
+    test_predictions = model.predict(X_test)
     
     train_mae = mean_absolute_error(y_train, train_predictions)
     test_mae = mean_absolute_error(y_test, test_predictions)
     
-    return best_model, train_mae, test_mae
+    return model, train_mae, test_mae
+
+@st.cache_data
+def train_model_with_retry(df, origin, destination, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            with st.spinner(f'Training model (attempt {attempt + 1}/{max_retries})...'):
+                model, train_mae, test_mae = train_model(df, origin, destination)
+            return model, train_mae, test_mae
+        except Exception as e:
+            if attempt < max_retries - 1:
+                st.warning(f"An error occurred during model training (attempt {attempt + 1}). Retrying...")
+                time.sleep(2)  # Wait for 2 seconds before retrying
+            else:
+                st.error(f"Failed to train model after {max_retries} attempts. Error: {str(e)}")
+                logging.error(f"Model training failed: {str(e)}")
+                return None, None, None
 
 def predict_prices(model, start_date, end_date, origin, destination):
     date_range = pd.date_range(start=start_date, end=end_date)
@@ -330,9 +302,9 @@ def main():
     default_date = datetime(2025, 6, 1).date()
 
     travel_date = st.date_input("Select travel date:", 
-                                                    min_value=min_date,
-                    max_value=max_date,
-                    value=default_date)
+                                min_value=min_date,
+                                max_value=max_date,
+                                value=default_date)
 
     if st.button("Predict Price"):
         if validate_input(origin, destination, travel_date):
@@ -355,13 +327,12 @@ def main():
                     new_data = fetch_and_process_data(origin, destination, travel_date, travel_date + relativedelta(months=12))
                     df = pd.concat([df, new_data]).drop_duplicates().reset_index(drop=True)
                     update_progress(50, "Saving updated data to GCS...")
-                    save_data_to_gcs(df, origin, destination)
-
-                update_progress(60, "Engineering features...")
+                    save_data_to_gcs(df, origin, destination)                update_progress(60, "Engineering features...")
                 df = engineer_features(df)
 
-                if len(df) > 10000:
-                    df = df.sample(n=10000, random_state=42)
+                # Check data size and sample if necessary
+                if len(df) > 5000:  # Reduced threshold
+                    df = df.sample(n=5000, random_state=42)
                     st.info("Using a subset of the data for model training due to performance constraints.")
 
                 update_progress(70, "Training model...")
