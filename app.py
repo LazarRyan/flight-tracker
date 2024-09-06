@@ -112,7 +112,8 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
                         'departure': data[0]['itineraries'][0]['segments'][0]['departure']['at'],
                         'price': float(data[0]['price']['total']),
                         'origin': origin,
-                        'destination': destination
+                        'destination': destination,
+                        'query_date': datetime.now().strftime('%Y-%m-%d')
                     }
                     all_data.append(flight_data)
                     logging.info(f"Fetched data for {origin} to {destination} on {sample_date}")
@@ -135,6 +136,7 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
     df = pd.DataFrame(all_data)
     if not df.empty:
         df['departure'] = pd.to_datetime(df['departure'])
+        df['query_date'] = pd.to_datetime(df['query_date'])
     return df
 
 def engineer_features(df):
@@ -145,12 +147,18 @@ def engineer_features(df):
     df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
     df['is_holiday'] = ((df['month'] == 12) & (df['day'].isin([24, 25, 31])) | 
                         (df['month'] == 1) & (df['day'] == 1)).astype(int)
+    df['days_until_departure'] = (df['departure'] - df['query_date']).dt.days
     return df
 
-def train_model(df):
-    features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday']
+def train_model(df, origin, destination):
+    features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday', 'days_until_departure']
     X = df[features]
     y = df['price']
+    
+    # Add origin and destination as categorical features
+    X['origin'] = origin
+    X['destination'] = destination
+    X = pd.get_dummies(X, columns=['origin', 'destination'], drop_first=True)
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
@@ -174,14 +182,41 @@ def train_model(df):
 def predict_prices(model, start_date, end_date, origin, destination):
     date_range = pd.date_range(start=start_date, end=end_date)
     future_data = pd.DataFrame({'departure': date_range})
+    future_data['query_date'] = datetime.now()
     future_data = engineer_features(future_data)
     future_data['origin'] = origin
     future_data['destination'] = destination
     
-    features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday']
-    future_data['predicted_price'] = model.predict(future_data[features])
+    features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday', 'days_until_departure', 'origin', 'destination']
+    future_data_encoded = pd.get_dummies(future_data[features], columns=['origin', 'destination'], drop_first=True)
+    
+    # Ensure all columns from training are present
+    for col in model.feature_names_:
+        if col not in future_data_encoded.columns:
+            future_data_encoded[col] = 0
+    
+    future_data['predicted_price'] = model.predict(future_data_encoded[model.feature_names_])
     
     return future_data
+
+def predict_best_buy_days(model, travel_date, origin, destination):
+    today = datetime.now().date()
+    date_range = pd.date_range(start=today, end=travel_date)
+    buy_data = pd.DataFrame({'query_date': date_range, 'departure': travel_date})
+    buy_data = engineer_features(buy_data)
+    buy_data['origin'] = origin
+    buy_data['destination'] = destination
+    
+    features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday', 'days_until_departure', 'origin', 'destination']
+    buy_data_encoded = pd.get_dummies(buy_data[features], columns=['origin', 'destination'], drop_first=True)
+    
+    for col in model.feature_names_:
+        if col not in buy_data_encoded.columns:
+            buy_data_encoded[col] = 0
+    
+    buy_data['predicted_price'] = model.predict(buy_data_encoded[model.feature_names_])
+    
+    return buy_data.nsmallest(5, 'predicted_price')
 
 def plot_prices(df, title):
     fig = go.Figure()
@@ -190,7 +225,6 @@ def plot_prices(df, title):
     return fig
 
 def format_best_days_table(best_days):
-    best_days['departure'] = pd.to_datetime(best_days['departure'])
     best_days['Date'] = best_days['departure'].dt.strftime('%b %d, %Y (%a)')
     best_days['Price'] = best_days['predicted_price'].apply(lambda x: f'${x:.2f}')
     result = best_days[['Date', 'Price']].rename(columns={'Price': 'Predicted Price'})
@@ -237,10 +271,15 @@ def main():
     with col2:
         destination = st.text_input("Enter destination airport code in Italy (e.g., FCO):", "FCO")
 
+    # Set min_date to current date
+    min_date = datetime.now().date()
+    max_date = datetime(2025, 12, 31).date()
+    default_date = datetime(2025, 6, 1).date()
+
     travel_date = st.date_input("Select travel date:", 
-                                min_value=datetime.now().date(), 
-                                max_value=datetime(2025, 12, 31),
-                                value=datetime(2025, 6, 1))
+                                min_value=min_date,
+                                max_value=max_date,
+                                value=default_date)
 
     if st.button("Predict Price"):
         if validate_input(origin, destination, travel_date):
@@ -269,10 +308,11 @@ def main():
                 df = engineer_features(df)
 
                 update_progress(70, "Training model...")
-                model, train_mae, test_mae = train_model(df)
+                model, train_mae, test_mae = train_model(df, origin, destination)
 
                 update_progress(80, "Predicting prices...")
                 future_prices = predict_prices(model, travel_date, travel_date + timedelta(days=30), origin, destination)
+                best_buy_days = predict_best_buy_days(model, travel_date, origin, destination)
 
                 update_progress(90, "Generating visualizations...")
                 st.write(f"Model performance - Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
@@ -280,9 +320,11 @@ def main():
                 fig = plot_prices(future_prices, f"Predicted Prices for {origin} to {destination}")
                 st.plotly_chart(fig)
                 
-                best_days = future_prices.nsmallest(5, 'predicted_price')
                 st.write("Best days to fly in the next 30 days:")
-                st.table(format_best_days_table(best_days))
+                st.table(format_best_days_table(future_prices.nsmallest(5, 'predicted_price')))
+
+                st.write("Best days to buy tickets for your selected travel date:")
+                st.table(format_best_days_table(best_buy_days))
 
                 update_progress(100, "Completed!")
             except Exception as e:
