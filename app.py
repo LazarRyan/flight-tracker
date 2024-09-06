@@ -197,22 +197,22 @@ def main():
 
         with st.spinner("Loading data and making predictions..."):
             try:
-                existing_data = load_data_from_gcs(origin, destination)
+                existing_data, last_modified = load_data_from_gcs(origin, destination)
 
                 if not existing_data.empty:
-    		    try:
-        		most_recent_data = existing_data['departure'].max()
-        		oldest_data = existing_data['departure'].min()
-        
-        		st.success(f"Using existing data (last updated: {last_modified.strftime('%Y-%m-%d %H:%M:%S')})")
-        		st.info(f"Data range: {oldest_data.date()} to {most_recent_data.date()}")
-        		st.info(f"Total records: {len(existing_data)}")
-    		    except Exception as e:
-        		st.warning(f"Error processing existing data: {str(e)}. Will attempt to fetch new data.")
-        		logging.error(f"Error processing existing data: {str(e)}")
-        		existing_data = pd.DataFrame()  # Reset to empty DataFrame if there's an error
-	        else:
-    		   st.info("No existing data found. Will fetch new data.")
+                    try:
+                        most_recent_data = existing_data['departure'].max()
+                        oldest_data = existing_data['departure'].min()
+                        
+                        st.success(f"Using existing data (last updated: {last_modified.strftime('%Y-%m-%d %H:%M:%S')})")
+                        st.info(f"Data range: {oldest_data.date()} to {most_recent_data.date()}")
+                        st.info(f"Total records: {len(existing_data)}")
+                    except Exception as e:
+                        st.warning(f"Error processing existing data: {str(e)}. Will attempt to fetch new data.")
+                        logging.error(f"Error processing existing data: {str(e)}")
+                        existing_data = pd.DataFrame()  # Reset to empty DataFrame if there's an error
+                else:
+                    st.info("No existing data found. Will fetch new data.")
 
                 api_calls_made = 0
                 while should_call_api(origin, destination) and api_calls_made < 2:
