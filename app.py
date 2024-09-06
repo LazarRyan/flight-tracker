@@ -16,7 +16,7 @@ import random
 import json
 import openai
 import time
-import xgboost as xbg
+import xgboost as xgb
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
