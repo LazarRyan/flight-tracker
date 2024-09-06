@@ -103,14 +103,22 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
             departureDate=f"{start_date},{end_date}"
         )
         data = response.data
+        if not data:
+            logging.warning(f"No data returned from API for {origin} to {destination} from {start_date} to {end_date}")
+            return pd.DataFrame()
+        
         df = pd.DataFrame(data)
         df['departure'] = pd.to_datetime(df['departureDate'])
         df['price'] = df['price'].apply(lambda x: float(x['total']))
         df['origin'] = origin
         df['destination'] = destination
+        logging.info(f"Fetched {len(df)} new records from API for {origin} to {destination}")
         return df[['departure', 'price', 'origin', 'destination']]
     except ResponseError as error:
-        logging.error(f"Error fetching data from Amadeus API: {error}")
+        logging.error(f"Amadeus API error: {error}")
+        return pd.DataFrame()
+    except Exception as e:
+        logging.error(f"Unexpected error in fetch_and_process_data: {str(e)}")
         return pd.DataFrame()
 
 def engineer_features(df):
@@ -180,6 +188,8 @@ def main():
     with col2:
         destination = st.text_input("🛬 Destination Airport Code", "").upper()
 
+    force_refresh = st.checkbox("Force data refresh (bypass API call limit)")
+
     if st.button("🔍 Predict Prices"):
         if not validate_input(origin, destination, outbound_date):
             return
@@ -195,7 +205,7 @@ def main():
                     st.info(f"No existing data found for {origin} to {destination}. Will fetch new data.")
 
                 try:
-                    if should_call_api(origin, destination):
+                    if force_refresh or should_call_api(origin, destination):
                         st.info("Fetching new data from API...")
                         new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
                         if not new_data.empty:
@@ -203,9 +213,9 @@ def main():
                             existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
                             save_data_to_gcs(existing_data, origin, destination)
                             update_api_call_time(origin, destination)
-                            st.success(f"Data updated successfully. Total records: {len(existing_data)}")
+                            st.success(f"Data updated successfully. Added {len(new_data)} new records. Total records: {len(existing_data)}")
                         else:
-                            st.warning("No new data fetched from API.")
+                            st.warning("No new data fetched from API. This could be due to API limitations or no available flights for the specified dates.")
                     else:
                         st.info("Using cached data (API call limit reached for today).")
                 except Exception as e:
