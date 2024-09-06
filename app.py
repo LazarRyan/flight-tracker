@@ -200,9 +200,6 @@ def validate_input(origin, destination, outbound_date):
     if not origin or not destination:
         st.error("Please enter both origin and destination airport codes.")
         return False
-    if outbound_date.year < datetime.now().year:
-        st.error("Please select a future year for your outbound flight.")
-        return False
     if outbound_date <= datetime.now().date():
         st.error("Please select a future date for your outbound flight.")
         return False
@@ -234,18 +231,16 @@ def main():
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
 
     # User input
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
-        origin = st.text_input("Enter origin airport code (e.g., LAX):", "LAX")
+        origin = st.text_input("Enter origin airport code (e.g., LAX):", "EWR")
     with col2:
         destination = st.text_input("Enter destination airport code in Italy (e.g., FCO):", "FCO")
-    with col3:
-        travel_year = st.selectbox("Select travel year:", range(datetime.now().year, datetime.now().year + 3))
-    
+
     travel_date = st.date_input("Select travel date:", 
-                                min_value=datetime(travel_year, 1, 1), 
-                                max_value=datetime(travel_year, 12, 31),
-                                value=datetime(travel_year, 6, 1))
+                                min_value=datetime(2025, 1, 1), 
+                                max_value=datetime(2025, 12, 31),
+                                value=datetime(2025, 6, 1))
 
     if st.button("Predict Price"):
         if validate_input(origin, destination, travel_date):
@@ -300,7 +295,7 @@ def main():
     if user_input:
         try:
             with st.spinner("AI Assistant is thinking..."):
-                context = f"The user is using a flight price prediction app for travel to Italy in {travel_year}. They can input origin and destination airport codes and select a date to predict flight prices."
+                context = f"The user is using a flight price prediction app for travel to Italy in 2025. They can input origin and destination airport codes and select a date to predict flight prices."
                 response = chatbot(user_input, context)
             st.write("AI Assistant:", response)
         except Exception as e:
@@ -312,7 +307,7 @@ def main():
     st.write("""
     Italy is a country located in Southern Europe, known for its rich history, 
     stunning architecture, delicious cuisine, and beautiful landscapes. 
-    Some popular destinations include Rome, Florence, Venice, and the Amlfi Coast.
+    Some popular destinations include Rome, Florence, Venice, and the Amalfi Coast.
     """)
 
     # Add a footer
