@@ -113,14 +113,13 @@ def fetch_and_process_data(origin, destination, start_date, end_date):
                         'price': float(data[0]['price']['total']),
                         'origin': origin,
                         'destination': destination,
-                        'query_date': datetime.now().strftime('%Y-%m-%d')
+                        'query_date': datetime.now().strftime('%Y-%m-%d')  # Add this line
                     }
                     all_data.append(flight_data)
                     logging.info(f"Fetched data for {origin} to {destination} on {sample_date}")
                 else:
                     logging.warning(f"No data found for {origin} to {destination} on {sample_date}")
                 
-                # Add a delay between API calls
                 time.sleep(1)  # 1 second delay
             except ResponseError as error:
                 st.error(f"Error fetching data from Amadeus API: {error}")
@@ -147,6 +146,13 @@ def engineer_features(df):
     df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
     df['is_holiday'] = ((df['month'] == 12) & (df['day'].isin([24, 25, 31])) | 
                         (df['month'] == 1) & (df['day'] == 1)).astype(int)
+    
+    # Add query_date if it doesn't exist (for prediction data)
+    if 'query_date' not in df.columns:
+        df['query_date'] = datetime.now()
+    else:
+        df['query_date'] = pd.to_datetime(df['query_date'])
+    
     df['days_until_departure'] = (df['departure'] - df['query_date']).dt.days
     return df
 
