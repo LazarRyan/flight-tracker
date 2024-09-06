@@ -15,14 +15,8 @@ import random
 import json
 import openai
 import time
-
-try:
-    import xgboost as xgb
-    use_xgb = True
-except ImportError:
-    from sklearn.ensemble import GradientBoostingRegressor
-    use_xgb = False
-    st.warning("XGBoost not available. Using sklearn's GradientBoostingRegressor instead.")
+import xboost as xbg
+from sklearn.ensemble import GradientBoostingRegressor
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -170,6 +164,9 @@ def train_model(df, origin, destination):
     X['destination'] = destination
     X = pd.get_dummies(X, columns=['origin', 'destination'], drop_first=True)
     
+    # Store feature names
+    feature_names = X.columns.tolist()
+    
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
     if use_xgb:
@@ -185,15 +182,15 @@ def train_model(df, origin, destination):
     train_mae = mean_absolute_error(y_train, train_predictions)
     test_mae = mean_absolute_error(y_test, test_predictions)
     
-    return model, train_mae, test_mae
+    return model, train_mae, test_mae, feature_names
 
 @st.cache_data
 def train_model_with_retry(df, origin, destination, max_retries=3):
     for attempt in range(max_retries):
         try:
             with st.spinner(f'Training model (attempt {attempt + 1}/{max_retries})...'):
-                model, train_mae, test_mae = train_model(df, origin, destination)
-            return model, train_mae, test_mae
+                model, train_mae, test_mae, feature_names = train_model(df, origin, destination)
+            return model, train_mae, test_mae, feature_names
         except Exception as e:
             if attempt < max_retries - 1:
                 st.warning(f"An error occurred during model training (attempt {attempt + 1}). Retrying...")
@@ -201,9 +198,9 @@ def train_model_with_retry(df, origin, destination, max_retries=3):
             else:
                 st.error(f"Failed to train model after {max_retries} attempts. Error: {str(e)}")
                 logging.error(f"Model training failed: {str(e)}")
-                return None, None, None
+                return None, None, None, None
 
-def predict_prices(model, start_date, end_date, origin, destination):
+def predict_prices(model, feature_names, start_date, end_date, origin, destination):
     date_range = pd.date_range(start=start_date, end=end_date)
     future_data = pd.DataFrame({'departure': date_range})
     future_data['query_date'] = datetime.now()
@@ -214,17 +211,19 @@ def predict_prices(model, start_date, end_date, origin, destination):
     features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday', 'days_until_departure', 'origin', 'destination']
     future_data_encoded = pd.get_dummies(future_data[features], columns=['origin', 'destination'], drop_first=True)
     
-    if use_xgb:
-        for col in model.feature_names_:
-            if col not in future_data_encoded.columns:
-                future_data_encoded[col] = 0
-        future_data_encoded = future_data_encoded[model.feature_names_]
+    # Ensure all columns from training are present
+    for col in feature_names:
+        if col not in future_data_encoded.columns:
+            future_data_encoded[col] = 0
+    
+    # Ensure columns are in the same order as during training
+    future_data_encoded = future_data_encoded[feature_names]
     
     future_data['predicted_price'] = model.predict(future_data_encoded)
     
     return future_data
 
-def predict_best_buy_days(model, travel_date, origin, destination):
+def predict_best_buy_days(model, feature_names, travel_date, origin, destination):
     today = datetime.now().date()
     date_range = pd.date_range(start=today, end=travel_date)
     buy_data = pd.DataFrame({'query_date': date_range, 'departure': travel_date})
@@ -235,11 +234,12 @@ def predict_best_buy_days(model, travel_date, origin, destination):
     features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday', 'days_until_departure', 'origin', 'destination']
     buy_data_encoded = pd.get_dummies(buy_data[features], columns=['origin', 'destination'], drop_first=True)
     
-    if use_xgb:
-        for col in model.feature_names_:
-            if col not in buy_data_encoded.columns:
-                buy_data_encoded[col] = 0
-        buy_data_encoded = buy_data_encoded[model.feature_names_]
+    for col in feature_names:
+        if col not in buy_data_encoded.columns:
+            buy_data_encoded[col] = 0
+    
+    # Ensure columns are in the same order as during training
+    buy_data_encoded = buy_data_encoded[feature_names]
     
     buy_data['predicted_price'] = model.predict(buy_data_encoded)
     
@@ -325,10 +325,11 @@ def main():
                 if df.empty or should_call_api(origin, destination):
                     update_progress(40, "Fetching new data from API...")
                     new_data = fetch_and_process_data(origin, destination, travel_date, travel_date + relativedelta(months=12))
-                    df = pd.concat([df, new_data]).drop_duplicates().reset_index(drop=True)
+                    df = pd.concat([                df = pd.concat([df, new_data]).drop_duplicates().reset_index(drop=True)
                     update_progress(50, "Saving updated data to GCS...")
                     save_data_to_gcs(df, origin, destination)
-                    update_progress(60, "Engineering features...")
+
+                update_progress(60, "Engineering features...")
                 df = engineer_features(df)
 
                 # Check data size and sample if necessary
@@ -337,13 +338,13 @@ def main():
                     st.info("Using a subset of the data for model training due to performance constraints.")
 
                 update_progress(70, "Training model...")
-                model, train_mae, test_mae = train_model_with_retry(df, origin, destination)
+                model, train_mae, test_mae, feature_names = train_model_with_retry(df, origin, destination)
                 if model is None:
                     st.stop()
 
                 update_progress(80, "Predicting prices...")
-                future_prices = predict_prices(model, travel_date, travel_date + timedelta(days=30), origin, destination)
-                best_buy_days = predict_best_buy_days(model, travel_date, origin, destination)
+                future_prices = predict_prices(model, feature_names, travel_date, travel_date + timedelta(days=30), origin, destination)
+                best_buy_days = predict_best_buy_days(model, feature_names, travel_date, origin, destination)
 
                 update_progress(90, "Generating visualizations...")
                 st.write(f"Model performance - Train MAE: ${train_mae:.2f}, Test MAE: ${test_mae:.2f}")
