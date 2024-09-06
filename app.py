@@ -18,43 +18,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Custom CSS for improved visual security
-st.markdown("""
-<style>
-    .reportview-container {
-        background: #f0f2f6;
-    }
-    .main .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-    .stButton>button {
-        background-color: #4F8BF9;
-        color: white;
-        border-radius: 5px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-@st.cache_resource
-def initialize_clients():
-    amadeus = Client(
-        client_id=st.secrets["AMADEUS_CLIENT_ID"],
-        client_secret=st.secrets["AMADEUS_CLIENT_SECRET"]
-    )
-    credentials = service_account.Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"]
-    )
-    storage_client = storage.Client(credentials=credentials)
-    bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
-    return amadeus, bucket
-
+# Initialize clients (assuming you have this function)
 amadeus, bucket = initialize_clients()
 
 def get_data_filename(origin, destination):
     return f"flight_prices_{origin}_{destination}.csv"
 
-def load_data_from_gcs(origin, destination, trip_type):
+def load_data_from_gcs(origin, destination):
     filename = get_data_filename(origin, destination)
     blob = bucket.blob(filename)
     df = pd.DataFrame()
@@ -65,135 +35,11 @@ def load_data_from_gcs(origin, destination, trip_type):
         df['departure'] = pd.to_datetime(df['departure'])
         if 'return' in df.columns:
             df['return'] = pd.to_datetime(df['return'])
-        
-        # Filter based on trip type
-        if trip_type == "round-trip":
-            df = df[df['return'].notna()]
-        else:
-            df = df[df['return'].isna()]
-        
-        logging.info(f"Loaded {len(df)} records for {origin} to {destination} ({trip_type})")
+        logging.info(f"Loaded {len(df)} records for {origin} to {destination}")
     except Exception as e:
-        logging.warning(f"No data file found for {origin} to {destination}. Error: {str(e)}")
+        logging.warning(f"Error loading data for {origin} to {destination}: {str(e)}")
 
-    if df.empty:
-        logging.warning(f"No existing data found for {origin} to {destination} ({trip_type})")
-    
     return df
-
-def save_data_to_gcs(new_df, origin, destination):
-    filename = get_data_filename(origin, destination)
-    existing_df = load_data_from_gcs(origin, destination, "all")  # Load all data
-    
-    combined_df = pd.concat([existing_df, new_df], ignore_index=True)
-    
-    # Remove duplicates, keeping the latest entry
-    combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'return', 'origin', 'destination'], keep='last')
-    
-    csv_buffer = StringIO()
-    combined_df.to_csv(csv_buffer, index=False)
-    blob = bucket.blob(filename)
-    blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
-    
-    logging.info(f"Saved {len(combined_df)} records for {origin} to {destination}")
-
-def get_api_call_filename(origin, destination):
-    return f"api_calls_{origin}_{destination}.txt"
-
-def should_call_api(origin, destination):
-    filename = get_api_call_filename(origin, destination)
-    blob = bucket.blob(filename)
-    if blob.exists():
-        content = blob.download_as_text().strip().split('\n')
-        current_date = datetime.now().date().isoformat()
-        calls_today = sum(1 for call in content if call.startswith(current_date))
-        return calls_today < 2
-    return True
-
-def update_api_call_time(origin, destination):
-    filename = get_api_call_filename(origin, destination)
-    blob = bucket.blob(filename)
-    current_date = datetime.now().date().isoformat()
-    if blob.exists():
-        content = blob.download_as_text().strip().split('\n')
-        content = [line for line in content if line.startswith(current_date)]
-    else:
-        content = []
-    content.append(f"{current_date}_{datetime.now().isoformat()}")
-    blob.upload_from_string('\n'.join(content))
-
-@st.cache_data
-def get_flight_offers(origin, destination, departure_date, return_date=None):
-    try:
-        if return_date:
-            response = amadeus.shopping.flight_offers_search.get(
-                originLocationCode=origin,
-                destinationLocationCode=destination,
-                departureDate=departure_date.strftime("%Y-%m-%d"),
-                returnDate=return_date.strftime("%Y-%m-%d"),
-                adults=1,
-                max=5
-            )
-        else:
-            response = amadeus.shopping.flight_offers_search.get(
-                originLocationCode=origin,
-                destinationLocationCode=destination,
-                departureDate=departure_date.strftime("%Y-%m-%d"),
-                adults=1,
-                max=5
-            )
-        return response.data
-    except ResponseError as error:
-        logging.error(f"Error fetching flight data: {error}")
-        return []
-
-def fetch_data_for_months(origin, destination, start_date, end_date, trip_type):
-    all_data = []
-    current_date = start_date
-    progress_bar = st.progress(0)
-    total_days = (end_date - start_date).days
-
-    for i in range(total_days):
-        if trip_type == "round-trip":
-            return_date = current_date + timedelta(days=7)  # Assume 7-day trips for round-trip
-            offers = get_flight_offers(origin, destination, current_date, return_date)
-        else:
-            offers = get_flight_offers(origin, destination, current_date)
-        all_data.extend(offers)
-        current_date += timedelta(days=1)
-        progress_bar.progress((i + 1) / total_days)
-
-    return all_data
-def process_and_combine_data(api_data, existing_data, origin, destination, trip_type):
-    new_data = []
-    for offer in api_data:
-        outbound = offer['itineraries'][0]
-        price = float(offer['price']['total'])
-        departure = outbound['segments'][0]['departure']['at']
-        
-        if trip_type == "round-trip" and len(offer['itineraries']) > 1:
-            inbound = offer['itineraries'][1]
-            return_date = inbound['segments'][0]['departure']['at']
-        else:
-            return_date = None
-        
-        new_data.append({
-            'departure': departure,
-            'return': return_date,
-            'price': price,
-            'origin': origin,
-            'destination': destination
-        })
-    
-    new_df = pd.DataFrame(new_data)
-    new_df['departure'] = pd.to_datetime(new_df['departure'])
-    if 'return' in new_df.columns:
-        new_df['return'] = pd.to_datetime(new_df['return'])
-
-    combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-    combined_df = combined_df.sort_values('departure').drop_duplicates(subset=['departure', 'return', 'origin', 'destination'], keep='last')
-    
-    return combined_df
 
 def engineer_features(df, trip_type, return_date=None):
     df['day_of_week'] = df['departure'].dt.dayofweek
@@ -206,17 +52,13 @@ def engineer_features(df, trip_type, return_date=None):
         df['return_month'] = return_date.month
         df['trip_duration'] = (return_date - df['departure'].dt.date).dt.days
     else:
-        # For one-way trips, set these features to 0 or some default value
         df['return_day_of_week'] = 0
         df['return_month'] = 0
         df['trip_duration'] = 0
     
-    # Create dummy variables for origin and destination
     df = pd.get_dummies(df, columns=['origin', 'destination'], prefix=['origin', 'dest'])
-    
     return df
 
-@st.cache_resource
 def train_model(df):
     X = df.drop(['departure', 'price'] + (['return'] if 'return' in df.columns else []), axis=1)
     y = df['price']
@@ -242,7 +84,6 @@ def predict_prices(model, end_date, origin, destination, all_origins, all_destin
     future_df['destination'] = destination
     future_df = engineer_features(future_df, trip_type, return_date)
     
-    # Ensure all origin and destination columns are present
     for o in all_origins:
         if f'origin_{o}' not in future_df.columns:
             future_df[f'origin_{o}'] = 0
@@ -262,7 +103,7 @@ def plot_prices(df, title, trip_type):
     fig.update_layout(title=title, xaxis_title='Departure Date',
                       yaxis_title='Predicted Price (USD)')
     if trip_type == "round-trip":
-        fig.add_vline(x=df['return'].iloc[0], line_dash="dash", line_color="red",
+        fig.add_vline(x=df['departure'].iloc[-1], line_dash="dash", line_color="red",
                       annotation_text="Return Date", annotation_position="top right")
     return fig
 
@@ -302,63 +143,47 @@ def main():
             existing_data = load_data_from_gcs(origin, destination)
 
             if existing_data.empty:
-                st.info("No existing data found. Fetching new data from API.")
-                # Fetch new data if needed (implementation remains the same)
-                # ...
+                st.error("No existing data found for this route. Please try a different route or check the data source.")
+                return
+
+            st.success(f"Loaded {len(existing_data)} existing records for analysis.")
+
+            with st.expander("View Sample Data"):
+                st.dataframe(existing_data.head())
+
+            # Engineer features
+            df = engineer_features(existing_data, trip_type, return_date if trip_type == "round-trip" else None)
+
+            # Train model
+            model, train_mae, test_mae = train_model(df)
+            logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
+
+            # Predict future prices
+            end_date = return_date if trip_type == "round-trip" else outbound_date
+            future_prices = predict_prices(model, end_date, origin, destination, 
+                                           existing_data['origin'].unique(), 
+                                           existing_data['destination'].unique(), 
+                                           trip_type, return_date if trip_type == "round-trip" else None)
+
+            # Display results
+            st.subheader(f"📈 Predicted {trip_type.capitalize()} Prices")
+            fig = plot_prices(future_prices, f"Predicted {trip_type.capitalize()} Prices ({origin} to {destination})", trip_type)
+            st.plotly_chart(fig, use_container_width=True)
+
+            best_days = future_prices.nsmallest(5, 'predicted_price')
+            st.subheader(f"💰 Best Days to Book {trip_type.capitalize()}")
+            st.table(best_days[['departure', 'predicted_price']].set_index('departure').rename(columns={'predicted_price': 'Predicted Price ($)'}))
+
+            avg_price = future_prices['predicted_price'].mean()
+            st.metric(label=f"💵 Average Predicted {trip_type.capitalize()} Price", value=f"${avg_price:.2f}")
+
+            price_range = future_prices['predicted_price'].max() - future_prices['predicted_price'].min()
+            st.metric(label=f"📊 {trip_type.capitalize()} Price Range", value=f"${price_range:.2f}")
+
+            if trip_type == "round-trip":
+                st.info(f"Predictions shown are for outbound flights from today until {return_date}, assuming a return on {return_date}.")
             else:
-                st.success(f"Loaded {len(existing_data)} existing records for analysis.")
-
-            if not existing_data.empty:
-                logging.info(f"Total records for analysis: {len(existing_data)}")
-
-                with st.expander("View Sample Data"):
-                    st.dataframe(existing_data.head())
-
-                # Engineer features for existing data
-                if trip_type == "round-trip":
-                    df = engineer_features(existing_data, trip_type, return_date)
-                else:
-                    df = engineer_features(existing_data, trip_type)
-
-                model, train_mae, test_mae = train_model(df)
-
-                logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
-
-                # Predict future prices
-                if trip_type == "round-trip":
-                    future_prices = predict_prices(model, return_date, origin, destination, 
-                                                   existing_data['origin'].unique(), 
-                                                   existing_data['destination'].unique(), 
-                                                   trip_type, return_date)
-                else:
-                    future_prices = predict_prices(model, outbound_date, origin, destination, 
-                                                   existing_data['origin'].unique(), 
-                                                   existing_data['destination'].unique(), 
-                                                   trip_type)
-
-                st.subheader(f"📈 Predicted {trip_type.capitalize()} Prices")
-                fig = plot_prices(future_prices, f"Predicted {trip_type.capitalize()} Prices ({origin} to {destination})", trip_type)
-                st.plotly_chart(fig, use_container_width=True)
-
-                best_days = future_prices.nsmallest(5, 'predicted_price')
-                st.subheader(f"💰 Best Days to Book {trip_type.capitalize()}")
-                st.table(best_days[['departure', 'predicted_price']].set_index('departure').rename(columns={'predicted_price': 'Predicted Price ($)'}))
-
-                avg_price = future_prices['predicted_price'].mean()
-                st.metric(label=f"💵 Average Predicted {trip_type.capitalize()} Price", value=f"${avg_price:.2f}")
-
-                price_range = future_prices['predicted_price'].max() - future_prices['predicted_price'].min()
-                st.metric(label=f"📊 {trip_type.capitalize()} Price Range", value=f"${price_range:.2f}")
-
-                # Add a note about the prediction timeframe
-                if trip_type == "round-trip":
-                    st.info(f"Predictions shown are for outbound flights from today until {return_date}, assuming a return on {return_date}.")
-                else:
-                    st.info(f"Predictions shown are for flights from today until {outbound_date}.")
-
-            else:
-                st.error("No data available for prediction. Please try again with a different route or check your data source.")
-                logging.error(f"No data available for prediction for {origin} to {destination}.")
+                st.info(f"Predictions shown are for flights from today until {outbound_date}.")
 
 if __name__ == "__main__":
     main()
