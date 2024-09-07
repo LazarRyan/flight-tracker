@@ -216,10 +216,10 @@ def get_ai_tourism_advice(destination):
         )
         logging.info(f"Successfully retrieved tourism advice for {destination}")
         return response.choices[0].message['content']
-    except openai.error.AuthenticationError as e:
+    except openai.AuthenticationError as e:
         logging.error(f"OpenAI Authentication Error: {str(e)}")
         raise
-    except openai.error.APIError as e:
+    except openai.APIError as e:
         logging.error(f"OpenAI API Error: {str(e)}")
         raise
     except Exception as e:
@@ -328,9 +328,10 @@ def main():
                 st.info(f"Requesting advice for {tourism_destination}...")
                 advice = get_ai_tourism_advice(tourism_destination)
                 st.write(advice)
-            except openai.error.AuthenticationError:
+            exceptite(advice)
+            except openai.AuthenticationError:
                 st.error("Failed to authenticate with OpenAI. Please check your API key.")
-            except openai.error.APIError:
+            except openai.APIError:
                 st.error("Error communicating with OpenAI API. Please try again later.")
             except Exception as e:
                 logging.error(f"Error in AI tourism advice: {str(e)}")
