@@ -203,10 +203,12 @@ def get_ai_tourism_advice(destination):
             ]
         )
         return response.choices[0].message['content']
+    except openai.error.OpenAIError as e:
+        logging.error(f"OpenAI API error: {str(e)}")
+        return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
     except Exception as e:
-        logging.error(f"Error in AI tourism advice: {str(e)}")
-        logging.error(f"Full error details: {e.__class__.__name__}: {str(e)}")
-        raise
+        logging.error(f"Unexpected error in AI tourism advice: {str(e)}")
+        return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
 
 def format_best_days_table(df):
     df = df.copy()
