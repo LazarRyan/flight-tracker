@@ -284,8 +284,6 @@ def main():
     with col2:
         destination = st.text_input("🛬 Destination Airport Code in Italy", "").upper()
 
-    query_type = st.selectbox("What type of information are you looking for?", ["Attractions", "Restaurants", "Events", "General Travel Tips"])
-
     if st.button("🔍 Predict Prices"):
         if not validate_input(origin, destination, outbound_date):
             return
@@ -346,14 +344,18 @@ def main():
 
                 st.info(f"Predictions shown are for flights from today until {outbound_date}.")
 
+                # Dropdown for AI Tourism Advice
+                query_type = st.selectbox("What type of information are you looking for?", ["Attractions", "Restaurants", "Events", "General Travel Tips"])
+
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
-                try:
-                    advice = get_ai_tourism_advice(destination, query_type)
-                    st.write(advice)
-                except Exception as e:
-                    logging.error(f"Error in AI tourism advice: {str(e)}")
-                    st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
+                if st.button("Get Tourism Advice"):
+                    try:
+                        advice = get_ai_tourism_advice(destination, query_type)
+                        st.write(advice)
+                    except Exception as e:
+                        logging.error(f"Error in AI tourism advice: {str(e)}")
+                        st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
 
                 st.info("The AI tourism advice is generated based on the destination airport code. For more accurate results, consider using the city name instead of the airport code.")
 
