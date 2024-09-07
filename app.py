@@ -195,12 +195,12 @@ def validate_input(origin, destination, outbound_date):
 
 def get_ai_tourism_advice(destination):
     try:
-        # Attempt to get detailed tourism advice
+        # Primary query to the AI for detailed tourism advice
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful travel assistant providing detailed advice about tourist attractions."},
-                {"role": "user", "content": f"Provide detailed information about {destination}, Italy, including must-visit attractions, cultural insights, and travel tips."}
+                {"role": "system", "content": "You are a knowledgeable travel assistant."},
+                {"role": "user", "content": f"Please provide detailed information about {destination}, Italy. Include must-visit attractions, cultural insights, travel tips, and any current events or festivals happening in the area."}
             ]
         )
         return response.choices[0].message['content']
@@ -209,6 +209,7 @@ def get_ai_tourism_advice(destination):
         
         # Fallback mechanism: Try using a more general query
         try:
+            # Suggest using a city name if the destination is an airport code
             city_name = destination  # You might want to map airport codes to city names for better results
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
@@ -220,7 +221,10 @@ def get_ai_tourism_advice(destination):
             return response.choices[0].message['content']
         except Exception as fallback_error:
             logging.error(f"Fallback error in AI tourism advice: {str(fallback_error)}")
-            return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
+            return (
+                "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later. "
+                "For more accurate results, consider using the city name instead of the airport code."
+            )
 
 
 def format_best_days_table(df):
