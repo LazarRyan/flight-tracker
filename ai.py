@@ -1,8 +1,12 @@
 import os
 import openai
+import toml
 
-# Set your OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Ensure this environment variable is set
+# Load secrets from the secrets.toml file
+secrets = toml.load('.streamlit/secrets.toml')
+
+# Access the OpenAI API key using the correct key name
+openai.api_key = secrets['openai']['OPENAI_API_KEY']  # Use 'OPENAI_API_KEY' instead of 'api_key'
 
 def get_ai_tourism_advice(destination):
     try:

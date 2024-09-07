@@ -34,8 +34,6 @@ def initialize_clients():
     )
     storage_client = storage.Client(credentials=credentials)
     bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
-    logging.debug(f"OpenAI API key set: {'*' * len(openai.api_key)}")
     return amadeus, bucket
 
 amadeus, bucket = initialize_clients()
@@ -202,12 +200,9 @@ def get_ai_tourism_advice(destination):
                 {"role": "user", "content": f"Provide detailed information about {destination}, Italy, including must-visit attractions and cultural insights."}
             ]
         )
-        return response.choices[0].message['content']
-    except openai.error.OpenAIError as e:
-        logging.error(f"OpenAI API error: {str(e)}")
-        return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
+        return response['choices'][0]['message']['content']
     except Exception as e:
-        logging.error(f"Unexpected error in AI tourism advice: {str(e)}")
+        logging.error(f"Error in AI tourism advice: {str(e)}")
         return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
 
 def format_best_days_table(df):
@@ -294,12 +289,8 @@ def main():
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
                 city = destination  # You might want to map airport codes to city names for better results
-                try:
-                    advice = get_ai_tourism_advice(city)
-                    st.write(advice)
-                except Exception as e:
-                    logging.error(f"Error in AI tourism advice: {str(e)}")
-                    st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
+                advice = get_ai_tourism_advice(city)
+                st.write(advice)
 
                 st.info("The AI tourism advice is generated based on the destination airport code. For more accurate results, consider using the city name instead of the airport code.")
 
