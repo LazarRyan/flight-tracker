@@ -15,9 +15,10 @@ import logging
 import random
 import json
 import openai
+import sys
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
 
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
@@ -25,18 +26,27 @@ st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 # Initialize clients
 @st.cache_resource
 def initialize_clients():
-    amadeus = Client(
-        client_id=st.secrets["AMADEUS_CLIENT_ID"],
-        client_secret=st.secrets["AMADEUS_CLIENT_SECRET"]
-    )
-    credentials = service_account.Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"]
-    )
-    storage_client = storage.Client(credentials=credentials)
-    bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
-    logging.debug(f"OpenAI API key set: {'*' * len(openai.api_key)}")
-    return amadeus, bucket
+    try:
+        amadeus = Client(
+            client_id=st.secrets["AMADEUS_CLIENT_ID"],
+            client_secret=st.secrets["AMADEUS_CLIENT_SECRET"]
+        )
+        logging.info("Amadeus client initialized successfully")
+        
+        credentials = service_account.Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"]
+        )
+        storage_client = storage.Client(credentials=credentials)
+        bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
+        logging.info("GCS client initialized successfully")
+        
+        openai.api_key = st.secrets["OPENAI_API_KEY"]
+        logging.info(f"OpenAI API key set: {openai.api_key[:5]}...{openai.api_key[-5:]}")
+        
+        return amadeus, bucket
+    except Exception as e:
+        logging.error(f"Error initializing clients: {str(e)}")
+        raise
 
 amadeus, bucket = initialize_clients()
 
@@ -56,8 +66,6 @@ def load_data_from_gcs(origin, destination):
             logging.info(f"Loaded {len(df)} records for {origin} to {destination}")
         except Exception as e:
             logging.warning(f"Error loading data for {origin} to {destination}: {str(e)}")
-    else:
-        logging.info(f"No existing data found for {origin} to {destination}.")
 
     return df
 
@@ -196,7 +204,9 @@ def validate_input(origin, destination, outbound_date):
     return True
 
 def get_ai_tourism_advice(destination):
+    logging.info(f"Attempting to get tourism advice for {destination}")
     try:
+        logging.debug(f"OpenAI API key: {openai.api_key[:5]}...{openai.api_key[-5:]}")
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -204,9 +214,16 @@ def get_ai_tourism_advice(destination):
                 {"role": "user", "content": f"Provide detailed information about {destination}, including must-visit attractions and cultural insights."}
             ]
         )
+        logging.info(f"Successfully retrieved tourism advice for {destination}")
         return response.choices[0].message['content']
+    except openai.error.AuthenticationError as e:
+        logging.error(f"OpenAI Authentication Error: {str(e)}")
+        raise
+    except openai.error.APIError as e:
+        logging.error(f"OpenAI API Error: {str(e)}")
+        raise
     except Exception as e:
-        logging.error(f"Error in AI tourism advice: {str(e)}")
+        logging.error(f"Unexpected error in AI tourism advice: {str(e)}")
         logging.error(f"Full error details: {e.__class__.__name__}: {str(e)}")
         raise
 
@@ -222,6 +239,12 @@ def format_best_days_table(df):
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
+
+    # Debug information
+    st.sidebar.subheader("Debug Information")
+    st.sidebar.write(f"OpenAI API Key: {openai.api_key[:5]}...{openai.api_key[-5:]}")
+    st.sidebar.write(f"Amadeus Client ID: {st.secrets['AMADEUS_CLIENT_ID'][:5]}...")
+    st.sidebar.write(f"GCS Bucket: {st.secrets['gcs_bucket_name']}")
 
     col1, col2 = st.columns(2)
 
@@ -302,8 +325,14 @@ def main():
     if st.button("Get Tourism Advice"):
         if tourism_destination:
             try:
+                st.info(f"Requesting advice for {tourism_destination}...")
                 advice = get_ai_tourism_advice(tourism_destination)
+                st.writetion)
                 st.write(advice)
+            except openai.error.AuthenticationError:
+                st.error("Failed to authenticate with OpenAI. Please check your API key.")
+            except openai.error.APIError:
+                st.error("Error communicating with OpenAI API. Please try again later.")
             except Exception as e:
                 logging.error(f"Error in AI tourism advice: {str(e)}")
                 st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
