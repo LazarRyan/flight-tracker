@@ -314,7 +314,7 @@ def main():
     # AI Tourism Advice Section
     st.markdown("---")
     st.subheader("🏛️ AI Tourism Advice")
-    tourism_destination = st.text_input("Enter a destination with an activity for tourism advice:\n('For example: Best wine in Naples')", "")
+    tourism_destination = st.text_input("Enter a destination with an activity for tourism advice:(For example: Best wine in Naples)", "")
     if st.button("Get Tourism Advice"):
         if tourism_destination:
             with st.spinner("Fetching tourism advice..."):
