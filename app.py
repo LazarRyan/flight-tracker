@@ -228,6 +228,15 @@ def plot_prices(df, title):
     fig.update_layout(title=title, xaxis_title='Date', yaxis_title='Price ($)')
     return fig
 
+def format_best_days_table(df):
+    df = df.copy()
+    df['departure'] = df['departure'].dt.strftime('%B %d, %Y')
+    df['Predicted Price'] = df['predicted_price'].apply(lambda x: f'${x:.2f}')
+    df['Weekend'] = df['is_weekend'].map({0: 'No', 1: 'Yes'})
+    df['Holiday'] = df['is_holiday'].map({0: 'No', 1: 'Yes'})
+    df = df.drop(['predicted_price', 'is_weekend', 'is_holiday'], axis=1)
+    return df.set_index('departure')
+
 def validate_input(origin, destination, outbound_date):
     if not origin or not destination:
         st.error("Please enter both origin and destination airport codes.")
