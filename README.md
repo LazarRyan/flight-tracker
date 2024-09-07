@@ -85,4 +85,43 @@ This Streamlit application is designed to assist travelers planning their trip t
    - Enter a destination
    - Click "Get Tourism Advice" for personalized recommendations
 
-## Project Structure
+
+## API Integration
+- **Amadeus API**: Used for fetching real-time flight data. Ensure your Amadeus API credentials are correctly set in the Streamlit secrets.
+- **OpenAI API**: Powers the AI tourism advice feature. Verify that your OpenAI API key is properly configured.
+
+## Machine Learning Model
+- Utilizes Gradient Boosting Regressor for price prediction
+- Features engineered include day of week, month, days until flight, etc.
+- Model is retrained periodically with newly acquired data
+
+## AI Tourism Advice
+- Leverages OpenAI's GPT-3.5-turbo model
+- Provides detailed information about destinations, attractions, and cultural insights
+- Responses are generated in real-time based on user input
+
+## Data Storage and Management
+- Google Cloud Storage is used for storing historical flight data
+- Implements caching mechanism to reduce API calls and improve performance
+- Data is updated regularly to ensure accuracy of predictions
+
+## Troubleshooting
+- **API Key Issues**: Ensure all API keys in `.streamlit/secrets.toml` are correct and up-to-date
+- **Data Loading Errors**: Check your internet connection and GCS bucket permissions
+- **Model Prediction Failures**: Verify the integrity of the saved model file and input data format
+
+## Contributing
+Contributions are welcome! Please follow these steps:
+1. Fork the repository
+2. Create a new branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+[MIT License]
+
+## Acknowledgements
+- Developed with ❤️ for Tanner & Jill's wedding in Italy, 2025
+- Thanks to Amadeus and OpenAI for their powerful APIs
+- Streamlit for making web app development in Python a breeze
