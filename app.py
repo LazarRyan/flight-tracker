@@ -26,15 +26,27 @@ st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 # Load secrets from the secrets.toml file
 secrets = toml.load('.streamlit/secrets.toml')
 
-# Access the OpenAI API key using the correct key name
-openai.api_key = secrets['openai']['OPENAI_API_KEY']  # Use 'OPENAI_API_KEY' instead of 'api_key'
+# Access the OpenAI API key
+if 'openai' in secrets and 'OPENAI_API_KEY' in secrets['openai']:
+    openai.api_key = secrets['openai']['OPENAI_API_KEY']
+else:
+    st.error("OpenAI API key not found in secrets.")
+    logging.error("OpenAI API key not found in secrets.")
+
+# Access Amadeus credentials
+if 'amadeus' in secrets and 'AMADEUS_CLIENT_ID' in secrets['amadeus']:
+    amadeus_client_id = secrets['amadeus']['AMADEUS_CLIENT_ID']
+    amadeus_client_secret = secrets['amadeus']['AMADEUS_CLIENT_SECRET']
+else:
+    st.error("Amadeus client ID or secret not found in secrets.")
+    logging.error("Amadeus client ID or secret not found in secrets.")
 
 # Initialize clients
 @st.cache_resource
 def initialize_clients():
     amadeus = Client(
-        client_id=secrets["AMADEUS_CLIENT_ID"],
-        client_secret=secrets["AMADEUS_CLIENT_SECRET"]
+        client_id=amadeus_client_id,
+        client_secret=amadeus_client_secret
     )
     credentials = service_account.Credentials.from_service_account_info(
         secrets["gcp_service_account"]
