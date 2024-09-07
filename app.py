@@ -41,18 +41,12 @@ def initialize_clients():
         bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
         logging.info("GCS client initialized successfully")
 
-        openai_api_key = st.secrets["OPENAI_API_KEY"]
-        openai.api_key = openai_api_key
-        logging.info(f"OpenAI API key set: {openai_api_key[:5]}...{openai_api_key[-5:]}")
+        openai.api_key = st.secrets["OPENAI_API_KEY"]
+        logging.info(f"OpenAI API key set: {openai.api_key[:5]}...{openai.api_key[-5:]}")
 
         return amadeus, bucket
-    except KeyError as e:
-        logging.error(f"Missing required secret: {str(e)}")
-        st.error(f"Missing required secret: {str(e)}. Please check your Streamlit secrets configuration.")
-        raise
     except Exception as e:
         logging.error(f"Error initializing clients: {str(e)}")
-        st.error(f"An error occurred while initializing clients: {str(e)}")
         raise
 
 amadeus, bucket = initialize_clients()
@@ -213,9 +207,7 @@ def validate_input(origin, destination, outbound_date):
     return True
 
 def get_ai_tourism_advice(destination):
-    logging.info(f"Attempting to get tourism advice for {destination}")
     try:
-        logging.debug(f"OpenAI API key: {openai.api_key[:5]}...{openai.api_key[-5:]}")
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -223,18 +215,10 @@ def get_ai_tourism_advice(destination):
                 {"role": "user", "content": f"Provide detailed information about {destination}, including must-visit attractions and cultural insights."}
             ]
         )
-        logging.info(f"Successfully retrieved tourism advice for {destination}")
-        return response.choices[0].message['content']
-    except openai.AuthenticationError as e:
-        logging.error(f"OpenAI Authentication Error: {str(e)}")
-        raise
-    except openai.APIError as e:
-        logging.error(f"OpenAI API Error: {str(e)}")
-        raise
+        return response['choices'][0]['message']['content']
     except Exception as e:
-        logging.error(f"Unexpected error in AI tourism advice: {str(e)}")
-        logging.error(f"Full error details: {e.__class__.__name__}: {str(e)}")
-        raise
+        st.error(f"Error: {str(e)}")
+        return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
 
 def format_best_days_table(df):
     df = df.copy()
@@ -248,12 +232,6 @@ def format_best_days_table(df):
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
-
-    # Debug information
-    st.sidebar.subheader("Debug Information")
-    st.sidebar.write(f"OpenAI API Key: {st.secrets['OPENAI_API_KEY'][:5]}...{st.secrets['OPENAI_API_KEY'][-5:]}")
-    st.sidebar.write(f"Amadeus Client ID: {st.secrets['AMADEUS_CLIENT_ID'][:5]}...")
-    st.sidebar.write(f"GCS Bucket: {st.secrets['gcs_bucket_name']}")
 
     col1, col2 = st.columns(2)
 
@@ -337,21 +315,14 @@ def main():
     tourism_destination = st.text_input("Enter a destination for tourism advice:", "")
     if st.button("Get Tourism Advice"):
         if tourism_destination:
-            try:
-                st.info(f"Requesting advice for {tourism_destination}...")
+            with st.spinner("Fetching tourism advice..."):
                 advice = get_ai_tourism_advice(tourism_destination)
+                st.subheader(f"AI Tourism Advice for {tourism_destination}:")
                 st.write(advice)
-            except openai.AuthenticationError:
-                st.error("Failed to authenticate with OpenAI. Please check your API key.")
-            except openai.APIError:
-                st.error("Error communicating with OpenAI API. Please try again later.")
-            except Exception as e:
-                logging.error(f"Error in AI tourism advice: {str(e)}")
-                st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
         else:
-            st.error("Please enter a destination for tourism advice.")
+            st.warning("Please enter a destination.")
 
-    st.info("The AI tourism advice is generated based on the destination you enter. For more accurate results, consider using specific city names.")
+    st.info("This AI tourism advice is generated based on the destination you enter. For more accurate results, consider using specific city or country names.")
 
     st.markdown("---")
     st.markdown("Developed with ❤️ for Tanner & Jill's wedding")
