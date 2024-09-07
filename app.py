@@ -35,6 +35,7 @@ def initialize_clients():
     storage_client = storage.Client(credentials=credentials)
     bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
     openai.api_key = st.secrets["OPENAI_API_KEY"]
+    logging.debug(f"OpenAI API key set: {'*' * len(openai.api_key)}")
     return amadeus, bucket
 
 amadeus, bucket = initialize_clients()
@@ -204,7 +205,15 @@ def get_ai_tourism_advice(destination):
         return response.choices[0].message['content']
     except Exception as e:
         logging.error(f"Error in AI tourism advice: {str(e)}")
-        return "Sorry, I couldn't retrieve tourism advice at the moment."
+        logging.error(f"Full error details: {e.__class__.__name__}: {str(e)}")
+        raise
+
+def format_best_days_table(df):
+    df = df.copy()
+    df['departure'] = df['departure'].dt.strftime('%B %d, %Y')
+    df['Predicted Price'] = df['predicted_price'].apply(lambda x: f'${x:.2f}')
+    df = df.drop('predicted_price', axis=1)
+    return df.set_index('departure')
 
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
@@ -267,7 +276,8 @@ def main():
 
                 best_days = future_prices.nsmallest(5, 'predicted_price')
                 st.subheader("💰 Best Days to Book")
-                st.table(best_days[['departure', 'predicted_price']].set_index('departure').rename(columns={'predicted_price': 'Predicted Price ($)'}))
+                formatted_best_days = format_best_days_table(best_days)
+                st.table(formatted_best_days)
 
                 avg_price = future_prices['predicted_price'].mean()
                 st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
@@ -280,8 +290,14 @@ def main():
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
                 city = destination  # You might want to map airport codes to city names for better results
-                advice = get_ai_tourism_advice(city)
-                st.write(advice)
+                try:
+                    advice = get_ai_tourism_advice(city)
+                    st.write(advice)
+                except Exception as e:
+                    logging.error(f"Error in AI tourism advice: {str(e)}")
+                    st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
+
+                st.info("The AI tourism advice is generated based on the destination airport code. For more accurate results, consider using the city name instead of the airport code.")
 
             except Exception as e:
                 st.error(f"An unexpected error occurred: {str(e)}")
