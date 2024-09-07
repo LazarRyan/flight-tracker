@@ -20,7 +20,7 @@ import openai
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set page config
-st.set_page_config(page_title="Flight Price Predictor", layout="wide")
+st.set_page_config(page_title="Flight Price Predictor and AI Tourism Advisor", layout="wide")
 
 # Initialize clients
 @st.cache_resource
@@ -56,6 +56,8 @@ def load_data_from_gcs(origin, destination):
             logging.info(f"Loaded {len(df)} records for {origin} to {destination}")
         except Exception as e:
             logging.warning(f"Error loading data for {origin} to {destination}: {str(e)}")
+    else:
+        logging.info(f"No existing data found for {origin} to {destination}.")
 
     return df
 
@@ -205,6 +207,7 @@ def get_ai_tourism_advice(destination):
         return response.choices[0].message['content']
     except Exception as e:
         logging.error(f"Error in AI tourism advice: {str(e)}")
+        logging.error(f"Full error details: {e.__class__.__name__}: {str(e)}")
         raise
 
 def format_best_days_table(df):
@@ -226,29 +229,30 @@ def main():
         origin = st.text_input("🛫 Origin Airport Code", "").upper()
         outbound_date = st.date_input("🗓️ Outbound Flight Date", value=datetime(2025, 9, 10))
     with col2:
-        destination = st.text_input("🌍 Destination (Country or City):", "").title()
+        destination_airport = st.text_input("🛬 Destination Airport Code", "").upper()
+        destination_tourism = st.text_input("🌍 Destination (Country or City) for Tourism Advice:", "").title()
 
-    if st.button("🔍 Predict Prices"):
-        if not validate_input(origin, destination, outbound_date):
+    if st.button("🔍 Predict Prices and Get Advice"):
+        if not validate_input(origin, destination_airport, outbound_date):
             return
 
         with st.spinner("Loading data and making predictions..."):
             try:
-                existing_data = load_data_from_gcs(origin, destination)
+                existing_data = load_data_from_gcs(origin, destination_airport)
 
                 if not existing_data.empty:
-                    st.success(f"Using existing data for {origin} to {destination}")
+                    st.success(f"Using existing data for {origin} to {destination_airport}")
                     st.info(f"Total records: {len(existing_data)}")
                 else:
-                    st.info(f"No existing data found for {origin} to {destination}. Will fetch new data.")
+                    st.info(f"No existing data found for {origin} to {destination_airport}. Will fetch new data.")
 
-                if should_call_api(origin, destination):
+                if should_call_api(origin, destination_airport):
                     st.info("Fetching new data from API...")
-                    new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
+                    new_data = fetch_and_process_data(origin, destination_airport, datetime.now().date(), outbound_date)
                     if not new_data.empty:
                         existing_data = pd.concat([existing_data, new_data], ignore_index=True)
                         existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
-                        save_data_to_gcs(existing_data, origin, destination)
+                        save_data_to_gcs(existing_data, origin, destination_airport)
                         st.success(f"Data updated successfully. Total records: {len(existing_data)}")
                     else:
                         st.warning("Unable to fetch new data from API. Proceeding with existing data.")
@@ -269,10 +273,10 @@ def main():
 
                 logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
 
-                future_prices = predict_prices(model, datetime.now().date(), outbound_date, origin, destination)
+                future_prices = predict_prices(model, datetime.now().date(), outbound_date, origin, destination_airport)
 
                 st.subheader("📈 Predicted Prices")
-                fig = plot_prices(future_prices, f"Predicted Prices ({origin} to {destination})")
+                fig = plot_prices(future_prices, f"Predicted Prices ({origin} to {destination_airport})")
                 st.plotly_chart(fig, use_container_width=True)
 
                 best_days = future_prices.nsmallest(5, 'predicted_price')
@@ -290,8 +294,8 @@ def main():
 
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
-                if destination:
-                    advice = get_ai_tourism_advice(destination)
+                if destination_tourism:
+                    advice = get_ai_tourism_advice(destination_tourism)
                     st.write(advice)
                 else:
                     st.error("Please enter a destination for tourism advice.")
