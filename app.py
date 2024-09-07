@@ -241,7 +241,7 @@ def main():
         origin = st.text_input("🛫 Origin Airport Code", "").upper()
         outbound_date = st.date_input("🗓️ Outbound Flight Date", value=datetime(2025, 9, 10))
     with col2:
-        destination = st.text_input("🛬 Destination Airport Code in Italy", "").upper()
+        destination = st.text_input("🛬 Destination Airport Code", "").upper()
 
     if st.button("🔍 Predict Prices"):
         if not validate_input(origin, destination, outbound_date):
