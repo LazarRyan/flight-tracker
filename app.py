@@ -24,32 +24,6 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import mean_absolute_error
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-from amadeus import Client, ResponseError
-from google.cloud import storage
-from io import StringIO
-from google.oauth2 import service_account
-import logging
-import random
-import json
-import openai
-import sys
-import os
-
-# Set up logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
-
-# Set page config
-st.set_page_config(page_title="Flight Price Predictor", layout="wide")
-
 # Initialize clients
 @st.cache_resource
 def initialize_clients():
