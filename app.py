@@ -20,7 +20,7 @@ import openai
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set page config
-st.set_page_config(page_title="Flight Price Predictor and AI Tourism Advisor", layout="wide")
+st.set_page_config(page_title="Flight Price Predictor and AI Travel Advisor", layout="wide")
 
 # Initialize clients
 @st.cache_resource
@@ -220,91 +220,103 @@ def format_best_days_table(df):
     return df.set_index('departure')
 
 def main():
-    st.title("✈️ Flight Price Predictor and AI Tourism Advisor")
-    st.write("Plan your trip and get tourism advice for any country!")
+    st.title("✈️ Flight Price Predictor and AI Travel Advisor")
+    st.write("Plan your trip and get tourism advice!")
 
-    col1, col2 = st.columns(2)
+    # Mode selection
+    advisor_mode = st.checkbox("Switch to AI Travel Advisor mode")
 
-    with col1:
-        origin = st.text_input("🛫 Origin Airport Code", "").upper()
-        outbound_date = st.date_input("🗓️ Outbound Flight Date", value=datetime(2025, 9, 10))
-    with col2:
-        destination_airport = st.text_input("🛬 Destination Airport Code", "").upper()
-        destination_tourism = st.text_input("🌍 Destination (Country or City) for Tourism Advice:", "").title()
+    if not advisor_mode:
+        # Flight Price Predictor mode
+        st.subheader("Flight Price Predictor")
+        col1, col2 = st.columns(2)
 
-    if st.button("🔍 Predict Prices and Get Advice"):
-        if not validate_input(origin, destination_airport, outbound_date):
-            return
+        with col1:
+            origin = st.text_input("🛫 Origin Airport Code", "").upper()
+            outbound_date = st.date_input("🗓️ Outbound Flight Date", value=datetime(2025, 9, 10))
+        with col2:
+            destination = st.text_input("🛬 Destination Airport Code", "").upper()
 
-        with st.spinner("Loading data and making predictions..."):
-            try:
-                existing_data = load_data_from_gcs(origin, destination_airport)
+        if st.button("🔍 Predict Prices"):
+            if not validate_input(origin, destination, outbound_date):
+                return
 
-                if not existing_data.empty:
-                    st.success(f"Using existing data for {origin} to {destination_airport}")
-                    st.info(f"Total records: {len(existing_data)}")
-                else:
-                    st.info(f"No existing data found for {origin} to {destination_airport}. Will fetch new data.")
+            with st.spinner("Loading data and making predictions..."):
+                try:
+                    existing_data = load_data_from_gcs(origin, destination)
 
-                if should_call_api(origin, destination_airport):
-                    st.info("Fetching new data from API...")
-                    new_data = fetch_and_process_data(origin, destination_airport, datetime.now().date(), outbound_date)
-                    if not new_data.empty:
-                        existing_data = pd.concat([existing_data, new_data], ignore_index=True)
-                        existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
-                        save_data_to_gcs(existing_data, origin, destination_airport)
-                        st.success(f"Data updated successfully. Total records: {len(existing_data)}")
+                    if not existing_data.empty:
+                        st.success(f"Using existing data for {origin} to {destination}")
+                        st.info(f"Total records: {len(existing_data)}")
                     else:
-                        st.warning("Unable to fetch new data from API. Proceeding with existing data.")
-                else:
-                    st.info("API call limit reached for this route. Using existing data.")
+                        st.info(f"No existing data found for {origin} to {destination}. Will fetch new data.")
 
-                if existing_data.empty:
-                    st.error("No data available for prediction. Please try again later or with a different route.")
-                    return
+                    if should_call_api(origin, destination):
+                        st.info("Fetching new data from API...")
+                        new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
+                        if not new_data.empty:
+                            existing_data = pd.concat([existing_data, new_data], ignore_index=True)
+                            existing_data = existing_data.sort_values('departure').drop_duplicates(subset=['departure', 'origin', 'destination'], keep='last')
+                            save_data_to_gcs(existing_data, origin, destination)
+                            st.success(f"Data updated successfully. Total records: {len(existing_data)}")
+                        else:
+                            st.warning("Unable to fetch new data from API. Proceeding with existing data.")
+                    else:
+                        st.info("API call limit reached for this route. Using existing data.")
 
-                st.success(f"Analyzing {len(existing_data)} records for your route.")
+                    if existing_data.empty:
+                        st.error("No data available for prediction. Please try again later or with a different route.")
+                        return
 
-                with st.expander("View Sample Data"):
-                    st.dataframe(existing_data.head())
+                    st.success(f"Analyzing {len(existing_data)} records for your route.")
 
-                df = engineer_features(existing_data)
-                model, train_mae, test_mae = train_model(df)
+                    with st.expander("View Sample Data"):
+                        st.dataframe(existing_data.head())
 
-                logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
+                    df = engineer_features(existing_data)
+                    model, train_mae, test_mae = train_model(df)
 
-                future_prices = predict_prices(model, datetime.now().date(), outbound_date, origin, destination_airport)
+                    logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
 
-                st.subheader("📈 Predicted Prices")
-                fig = plot_prices(future_prices, f"Predicted Prices ({origin} to {destination_airport})")
-                st.plotly_chart(fig, use_container_width=True)
+                    future_prices = predict_prices(model, datetime.now().date(), outbound_date, origin, destination)
 
-                best_days = future_prices.nsmallest(5, 'predicted_price')
-                st.subheader("💰 Best Days to Book")
-                formatted_best_days = format_best_days_table(best_days)
-                st.table(formatted_best_days)
+                    st.subheader("📈 Predicted Prices")
+                    fig = plot_prices(future_prices, f"Predicted Prices ({origin} to {destination})")
+                    st.plotly_chart(fig, use_container_width=True)
 
-                avg_price = future_prices['predicted_price'].mean()
-                st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
+                    best_days = future_prices.nsmallest(5, 'predicted_price')
+                    st.subheader("💰 Best Days to Book")
+                    formatted_best_days = format_best_days_table(best_days)
+                    st.table(formatted_best_days)
 
-                price_range = future_prices['predicted_price'].max() - future_prices['predicted_price'].min()
-                st.metric(label="📊 Price Range", value=f"${price_range:.2f}")
+                    avg_price = future_prices['predicted_price'].mean()
+                    st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
 
-                st.info(f"Predictions shown are for flights from today until {outbound_date}.")
+                    price_range = future_prices['predicted_price'].max() - future_prices['predicted_price'].min()
+                    st.metric(label="📊 Price Range", value=f"${price_range:.2f}")
 
-                # AI Tourism Advice
-                st.subheader("🏛️ AI Tourism Advice")
-                if destination_tourism:
-                    advice = get_ai_tourism_advice(destination_tourism)
-                    st.write(advice)
-                else:
-                    st.error("Please enter a destination for tourism advice.")
+                    st.info(f"Predictions shown are for flights from today until {outbound_date}.")
 
-                st.info("The AI tourism advice is generated based on the destination country or city. For more accurate results, consider using specific cities.")
+                except Exception as e:
+                    st.error(f"An unexpected error occurred: {str(e)}")
+                    logging.error(f"Unexpected error in main function: {str(e)}", exc_info=True)
 
-            except Exception as e:
-                st.error(f"An unexpected error occurred: {str(e)}")
-                logging.error(f"Unexpected error in main function: {str(e)}", exc_info=True)
+    else:
+        # AI Travel Advisor mode
+        st.subheader("AI Travel Advisor")
+        destination = st.text_input("🌍 Enter your destination (City or Country):", "").title()
+
+        if st.button("Get Travel Advice"):
+            if destination:
+                with st.spinner("Generating travel advice..."):
+                    try:
+                        advice = get_ai_tourism_advice(destination)
+                        st.write(advice)
+                    except Exception as e:
+                        st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
+                        logging.error(f"Error in AI tourism advice: {str(e)}")
+            else:
+                st.error("Please enter a destination for tourism advice.")
 
     st.markdown("---")
     st.markdown("Developed with ❤️ for Tanner & Jill's wedding")
