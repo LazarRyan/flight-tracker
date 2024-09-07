@@ -16,6 +16,7 @@ import random
 import json
 import openai
 import sys
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
@@ -40,8 +41,19 @@ def initialize_clients():
         bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
         logging.info("GCS client initialized successfully")
 
-        openai.api_key = st.secrets["OPENAI_API_KEY"]
-        logging.info(f"OpenAI API key set: {openai.api_key[:5]}...{openai.api_key[-5:]}")
+        # Try to get the API key from environment variable first (for Streamlit Cloud)
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+
+        # If not found in environment, try to get it from Streamlit secrets (for local development)
+        if not openai_api_key:
+            try:
+                openai_api_key = st.secrets["openai"]["OPENAI_API_KEY"]
+            except KeyError:
+                st.error("OPENAI_API_KEY not found in Streamlit secrets or environment variables. Please set it up properly.")
+                openai_api_key = None
+
+        openai.api_key = openai_api_key
+        logging.info(f"OpenAI API key set: {openai_api_key[:5]}...{openai_api_key[-5:] if openai_api_key else 'Not Set'}")
 
         return amadeus, bucket
     except Exception as e:
@@ -244,7 +256,7 @@ def main():
 
     # Debug information
     st.sidebar.subheader("Debug Information")
-    st.sidebar.write(f"OpenAI API Key: {openai.api_key[:5]}...{openai.api_key[-5:]}")
+    st.sidebar.write(f"OpenAI API Key: {openai.api_key[:5]}...{openai.api_key[-5:] if openai.api_key else 'Not Set'}")
     st.sidebar.write(f"Amadeus Client ID: {st.secrets['AMADEUS_CLIENT_ID'][:5]}...")
     st.sidebar.write(f"GCS Bucket: {st.secrets['gcs_bucket_name']}")
 
