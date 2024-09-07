@@ -23,20 +23,20 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 st.set_page_config(page_title="Flight Price Predictor and AI Travel Advisor", layout="wide")
 
 # Initialize clients
-   @st.cache_resource
-   def initialize_clients():
-       amadeus = Client(
-           client_id=st.secrets["amadeus"]["AMADEUS_CLIENT_ID"],
-           client_secret=st.secrets["amadeus"]["AMADEUS_CLIENT_SECRET"]
-       )
-       credentials = service_account.Credentials.from_service_account_info(
-           st.secrets["gcp_service_account"]
-       )
-       storage_client = storage.Client(credentials=credentials)
-       bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
-       openai.api_key = st.secrets["openai"]["OPENAI_API_KEY"]
-       logging.debug(f"OpenAI API key set: {'*' * len(openai.api_key)}")
-       return amadeus, bucket
+@st.cache_resource
+def initialize_clients():
+    amadeus = Client(
+        client_id=st.secrets["amadeus"]["AMADEUS_CLIENT_ID"],
+        client_secret=st.secrets["amadeus"]["AMADEUS_CLIENT_SECRET"]
+    )
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"]
+    )
+    storage_client = storage.Client(credentials=credentials)
+    bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
+    openai.api_key = st.secrets["openai"]["OPENAI_API_KEY"]
+    logging.debug(f"OpenAI API key set: {'*' * len(openai.api_key)}")
+    return amadeus, bucket
 
 amadeus, bucket = initialize_clients()
 
