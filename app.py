@@ -41,10 +41,18 @@ def initialize_clients():
         bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
         logging.info("GCS client initialized successfully")
 
-        # Get OpenAI API key from Streamlit secrets
-        openai_api_key = st.secrets["openai"]["OPENAI_API_KEY"]
-        openai.api_key = openai_api_key
-        logging.info(f"OpenAI API key set: {openai_api_key[:5]}...{openai_api_key[-5:]}")
+        # Try to get OpenAI API key from Streamlit secrets
+        try:
+            openai_api_key = st.secrets["openai"]["OPENAI_API_KEY"]
+        except KeyError:
+            # If not found in the nested structure, try the top level
+            openai_api_key = st.secrets.get("OPENAI_API_KEY")
+        
+        if openai_api_key:
+            openai.api_key = openai_api_key
+            logging.info(f"OpenAI API key set: {openai_api_key[:5]}...{openai_api_key[-5:]}")
+        else:
+            logging.warning("OpenAI API key not found in secrets. Some features may not work.")
 
         return amadeus, bucket
     except Exception as e:
@@ -247,7 +255,11 @@ def main():
 
     # Debug information
     st.sidebar.subheader("Debug Information")
-    st.sidebar.write(f"OpenAI API Key: {st.secrets['openai']['OPENAI_API_KEY'][:5]}...{st.secrets['openai']['OPENAI_API_KEY'][-5:]}")
+    openai_api_key = st.secrets.get("openai", {}).get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
+    if openai_api_key:
+        st.sidebar.write(f"OpenAI API Key: {openai_api_key[:5]}...{openai_api_key[-5:]}")
+    else:
+        st.sidebar.write("OpenAI API Key: Not set")
     st.sidebar.write(f"Amadeus Client ID: {st.secrets['AMADEUS_CLIENT_ID'][:5]}...")
     st.sidebar.write(f"GCS Bucket: {st.secrets['gcs_bucket_name']}")
 
