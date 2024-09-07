@@ -15,7 +15,6 @@ import logging
 import random
 import json
 import openai
-import wikipediaapi
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -40,40 +39,6 @@ def initialize_clients():
     return amadeus, bucket
 
 amadeus, bucket = initialize_clients()
-
-# Caching for tourism advice
-tourism_cache = {}
-
-def get_ai_tourism_advice(destination, query_type):
-    # Check if the response is cached
-    cache_key = f"{destination}-{query_type}"
-    if cache_key in tourism_cache:
-        return tourism_cache[cache_key]
-
-    try:
-        logging.info(f"Querying AI for destination: {destination}, query type: {query_type}")
-
-        # Construct the prompt based on the query type
-        prompt = f"Using the IATA code '{destination}', provide detailed information about the corresponding city in Italy. Include must-visit attractions, cultural insights, travel tips, and any current events or festivals happening in the area."
-
-        # Call the OpenAI API
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Ensure you're using the correct model
-            messages=[
-                {"role": "system", "content": "You are a knowledgeable travel assistant."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        # Extract the response content
-        advice = response.choices[0].message['content']
-        tourism_cache[cache_key] = advice  # Cache the response
-        logging.info(f"Received advice from AI: {advice[:100]}...")  # Log the first 100 characters of the response
-        return advice
-
-    except Exception as e:
-        logging.error(f"Error in AI tourism advice: {str(e)}")
-        return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
 
 def get_data_filename(origin, destination):
     return f"flight_prices_{origin}_{destination}.csv"
@@ -219,15 +184,6 @@ def plot_prices(df, title):
     fig.update_layout(title=title, xaxis_title='Date', yaxis_title='Price ($)')
     return fig
 
-def format_best_days_table(df):
-    df = df.copy()
-    df['departure'] = df['departure'].dt.strftime('%B %d, %Y')
-    df['Predicted Price'] = df['predicted_price'].apply(lambda x: f'${x:.2f}')
-    df['Weekend'] = df['is_weekend'].map({0: 'No', 1: 'Yes'})
-    df['Holiday'] = df['is_holiday'].map({0: 'No', 1: 'Yes'})
-    df = df.drop(['predicted_price', 'is_weekend', 'is_holiday'], axis=1)
-    return df.set_index('departure')
-
 def validate_input(origin, destination, outbound_date):
     if not origin or not destination:
         st.error("Please enter both origin and destination airport codes.")
@@ -236,6 +192,30 @@ def validate_input(origin, destination, outbound_date):
         st.error("Please select a future date for your outbound flight.")
         return False
     return True
+
+def get_ai_tourism_advice(destination):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful travel assistant providing detailed advice about tourist attractions."},
+                {"role": "user", "content": f"Provide detailed information about {destination}, Italy, including must-visit attractions and cultural insights."}
+            ]
+        )
+        return response.choices[0].message['content']
+    except Exception as e:
+        logging.error(f"Error in AI tourism advice: {str(e)}")
+        logging.error(f"Full error details: {e.__class__.__name__}: {str(e)}")
+        raise
+
+def format_best_days_table(df):
+    df = df.copy()
+    df['departure'] = df['departure'].dt.strftime('%B %d, %Y')
+    df['Predicted Price'] = df['predicted_price'].apply(lambda x: f'${x:.2f}')
+    df['Weekend'] = df['is_weekend'].map({0: 'No', 1: 'Yes'})
+    df['Holiday'] = df['is_holiday'].map({0: 'No', 1: 'Yes'})
+    df = df.drop(['predicted_price', 'is_weekend', 'is_holiday'], axis=1)
+    return df.set_index('departure')
 
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
@@ -309,22 +289,15 @@ def main():
 
                 st.info(f"Predictions shown are for flights from today until {outbound_date}.")
 
-                # Dropdown for AI Tourism Advice
-                query_type = st.selectbox("What type of information are you looking for?", ["Attractions", "Restaurants", "Events", "General Travel Tips"])
-
-                # Store the query type in session state
-                if 'query_type' not in st.session_state:
-                    st.session_state.query_type = query_type
-
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
-                if st.button("Get Tourism Advice"):
-                    try:
-                        advice = get_ai_tourism_advice(destination, st.session_state.query_type)
-                        st.write(advice)
-                    except Exception as e:
-                        logging.error(f"Error in AI tourism advice: {str(e)}")
-                        st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
+                city = destination  # You might want to map airport codes to city names for better results
+                try:
+                    advice = get_ai_tourism_advice(city)
+                    st.write(advice)
+                except Exception as e:
+                    logging.error(f"Error in AI tourism advice: {str(e)}")
+                    st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
 
                 st.info("The AI tourism advice is generated based on the destination airport code. For more accurate results, consider using the city name instead of the airport code.")
 
