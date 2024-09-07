@@ -21,7 +21,7 @@ import toml
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set page config
-st.set_page_config(page_title="Flight Price Predictor", layout="wide")
+st.set_page_config(page_title="Flight Price Predictor and AI Tourism Advisor", layout="wide")
 
 # Load secrets from the secrets.toml file
 secrets = toml.load('.streamlit/secrets.toml')
@@ -243,7 +243,7 @@ def main():
         origin = st.text_input("🛫 Origin Airport Code", "").upper()
         outbound_date = st.date_input("🗓️ Outbound Flight Date", value=datetime(2025, 9, 10))
     with col2:
-        destination = st.text_input("🌍 Destination Country:", "").title()
+        destination = st.text_input("🌍 Destination (Country or City):", "").title()
 
     if st.button("🔍 Predict Prices"):
         if not validate_input(origin, destination, outbound_date):
@@ -313,7 +313,7 @@ def main():
                 else:
                     st.error("Please enter a destination for tourism advice.")
 
-                st.info("The AI tourism advice is generated based on the destination country. For more accurate results, consider using specific cities.")
+                st.info("The AI tourism advice is generated based on the destination country or city. For more accurate results, consider using specific cities.")
 
             except Exception as e:
                 st.error(f"An unexpected error occurred: {str(e)}")
