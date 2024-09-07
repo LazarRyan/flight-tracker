@@ -22,6 +22,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
+# Access the OpenAI API key from Streamlit Cloud secrets
+openai.api_key = st.secrets["openai"]["OPENAI_API_KEY"]  # Use 'OPENAI_API_KEY' as defined in Streamlit Cloud
+
 # Initialize clients
 @st.cache_resource
 def initialize_clients():
@@ -288,9 +291,11 @@ def main():
 
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
-                city = destination  # You might want to map airport codes to city names for better results
-                advice = get_ai_tourism_advice(city)
-                st.write(advice)
+                if destination:
+                    advice = get_ai_tourism_advice(destination)
+                    st.write(advice)
+                else:
+                    st.error("Please enter a destination for tourism advice.")
 
                 st.info("The AI tourism advice is generated based on the destination airport code. For more accurate results, consider using the city name instead of the airport code.")
 
