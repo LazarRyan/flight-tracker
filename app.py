@@ -216,7 +216,7 @@ def get_ai_tourism_advice(destination):
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful travel assistant providing detailed advice about tourist attractions."},
-                {"role": "user", "content": f"Provide detailed information about {destination}, Italy, including must-visit attractions and cultural insights."}
+                {"role": "user", "content": f"Provide detailed information about {destination}, including must-visit attractions and cultural insights."}
             ]
         )
         return response['choices'][0]['message']['content']
@@ -234,8 +234,8 @@ def format_best_days_table(df):
     return df.set_index('departure')
 
 def main():
-    st.title("✈️ Flight Price Predictor for Italy 2025")
-    st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
+    st.title("✈️ Flight Price Predictor and AI Tourism Advisor")
+    st.write("Plan your trip and get tourism advice for any country!")
 
     col1, col2 = st.columns(2)
 
@@ -243,7 +243,7 @@ def main():
         origin = st.text_input("🛫 Origin Airport Code", "").upper()
         outbound_date = st.date_input("🗓️ Outbound Flight Date", value=datetime(2025, 9, 10))
     with col2:
-        destination = st.text_input("🛬 Destination Airport Code in Italy", "").upper()
+        destination = st.text_input("🌍 Destination Country:", "").title()
 
     if st.button("🔍 Predict Prices"):
         if not validate_input(origin, destination, outbound_date):
@@ -313,7 +313,7 @@ def main():
                 else:
                     st.error("Please enter a destination for tourism advice.")
 
-                st.info("The AI tourism advice is generated based on the destination airport code. For more accurate results, consider using the city name instead of the airport code.")
+                st.info("The AI tourism advice is generated based on the destination country. For more accurate results, consider using specific cities.")
 
             except Exception as e:
                 st.error(f"An unexpected error occurred: {str(e)}")
