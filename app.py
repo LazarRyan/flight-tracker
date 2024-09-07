@@ -15,44 +15,27 @@ import logging
 import random
 import json
 import openai
-import toml
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set page config
-st.set_page_config(page_title="Flight Price Predictor and AI Tourism Advisor", layout="wide")
-
-# Load secrets from the secrets.toml file
-secrets = toml.load('.streamlit/secrets.toml')
-
-# Access the OpenAI API key
-if 'openai' in secrets and 'OPENAI_API_KEY' in secrets['openai']:
-    openai.api_key = secrets['openai']['OPENAI_API_KEY']
-else:
-    st.error("OpenAI API key not found in secrets.")
-    logging.error("OpenAI API key not found in secrets.")
-
-# Access Amadeus credentials
-if 'amadeus' in secrets and 'AMADEUS_CLIENT_ID' in secrets['amadeus']:
-    amadeus_client_id = secrets['amadeus']['AMADEUS_CLIENT_ID']
-    amadeus_client_secret = secrets['amadeus']['AMADEUS_CLIENT_SECRET']
-else:
-    st.error("Amadeus client ID or secret not found in secrets.")
-    logging.error("Amadeus client ID or secret not found in secrets.")
+st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
 # Initialize clients
 @st.cache_resource
 def initialize_clients():
     amadeus = Client(
-        client_id=amadeus_client_id,
-        client_secret=amadeus_client_secret
+        client_id=st.secrets["AMADEUS_CLIENT_ID"],
+        client_secret=st.secrets["AMADEUS_CLIENT_SECRET"]
     )
     credentials = service_account.Credentials.from_service_account_info(
-        secrets["gcp_service_account"]
+        st.secrets["gcp_service_account"]
     )
     storage_client = storage.Client(credentials=credentials)
-    bucket = storage_client.bucket(secrets["gcs_bucket_name"])
+    bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
+    logging.debug(f"OpenAI API key set: {'*' * len(openai.api_key)}")
     return amadeus, bucket
 
 amadeus, bucket = initialize_clients()
@@ -219,10 +202,10 @@ def get_ai_tourism_advice(destination):
                 {"role": "user", "content": f"Provide detailed information about {destination}, including must-visit attractions and cultural insights."}
             ]
         )
-        return response['choices'][0]['message']['content']
+        return response.choices[0].message['content']
     except Exception as e:
         logging.error(f"Error in AI tourism advice: {str(e)}")
-        return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
+        raise
 
 def format_best_days_table(df):
     df = df.copy()
@@ -243,7 +226,7 @@ def main():
         origin = st.text_input("🛫 Origin Airport Code", "").upper()
         outbound_date = st.date_input("🗓️ Outbound Flight Date", value=datetime(2025, 9, 10))
     with col2:
-        destination = st.text_input("🌍 Destination Airport Code:", "").upper()
+        destination = st.text_input("🌍 Destination (Country or City):", "").title()
 
     if st.button("🔍 Predict Prices"):
         if not validate_input(origin, destination, outbound_date):
