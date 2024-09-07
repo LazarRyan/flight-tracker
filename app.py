@@ -52,19 +52,19 @@ def get_ai_tourism_advice(destination, query_type):
 
     try:
         logging.info(f"Querying AI for destination: {destination}, query type: {query_type}")
-        
+
         # Construct the prompt based on the query type
         prompt = f"Using the IATA code '{destination}', provide detailed information about the corresponding city in Italy. Include must-visit attractions, cultural insights, travel tips, and any current events or festivals happening in the area."
-        
+
         # Call the OpenAI API
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo",  # Ensure you're using the correct model
             messages=[
                 {"role": "system", "content": "You are a knowledgeable travel assistant."},
                 {"role": "user", "content": prompt}
             ]
         )
-        
+
         # Extract the response content
         advice = response.choices[0].message['content']
         tourism_cache[cache_key] = advice  # Cache the response
