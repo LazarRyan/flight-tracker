@@ -327,7 +327,6 @@ def main():
             try:
                 st.info(f"Requesting advice for {tourism_destination}...")
                 advice = get_ai_tourism_advice(tourism_destination)
-                st.writetion)
                 st.write(advice)
             except openai.error.AuthenticationError:
                 st.error("Failed to authenticate with OpenAI. Please check your API key.")
