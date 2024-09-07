@@ -50,57 +50,30 @@ def get_ai_tourism_advice(destination, query_type):
     if cache_key in tourism_cache:
         return tourism_cache[cache_key]
 
-    # Initialize Wikipedia API
-    wiki_wiki = wikipediaapi.Wikipedia('en')
-
-    # Fetch information from Wikipedia
-    page = wiki_wiki.page(destination)
-    if page.exists():
-        logging.info(f"Fetched information from Wikipedia for {destination}.")
-        advice = f"**{page.title}**\n\n{page.summary}\n\n[Read more on Wikipedia]({page.fullurl})"
-        tourism_cache[cache_key] = advice  # Cache the response
-        return advice
-
-    # If Wikipedia information is not found, fall back to GPT
     try:
         logging.info(f"Querying AI for destination: {destination}, query type: {query_type}")
+        
+        # Construct the prompt based on the query type
+        prompt = f"Using the IATA code '{destination}', provide detailed information about the corresponding city in Italy. Include must-visit attractions, cultural insights, travel tips, and any current events or festivals happening in the area."
+        
+        # Call the OpenAI API
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an ex-air traffic controller with extensive knowledge of IATA codes and tourist attractions."},
-                {"role": "user", "content": f"Using the IATA code '{destination}', provide detailed information about the corresponding city in Italy. Include must-visit attractions, cultural insights, travel tips, and any current events or festivals happening in the area."}
+                {"role": "system", "content": "You are a knowledgeable travel assistant."},
+                {"role": "user", "content": prompt}
             ]
         )
+        
+        # Extract the response content
         advice = response.choices[0].message['content']
         tourism_cache[cache_key] = advice  # Cache the response
         logging.info(f"Received advice from AI: {advice[:100]}...")  # Log the first 100 characters of the response
         return advice
+
     except Exception as e:
         logging.error(f"Error in AI tourism advice: {str(e)}")
-        logging.debug(f"Exception details: {e}", exc_info=True)  # Log the full exception details
-        
-        # Fallback mechanism: Try using a more general query
-        try:
-            city_name = destination  # You might want to map airport codes to city names for better results
-            logging.info(f"Fallback query for city: {city_name}")
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful travel assistant."},
-                    {"role": "user", "content": f"Can you provide some general travel tips and attractions for the city corresponding to the IATA code '{city_name}', Italy?"}
-                ]
-            )
-            advice = response.choices[0].message['content']
-            tourism_cache[cache_key] = advice  # Cache the response
-            logging.info(f"Received fallback advice from AI: {advice[:100]}...")  # Log the first 100 characters of the response
-            return advice
-        except Exception as fallback_error:
-            logging.error(f"Fallback error in AI tourism advice: {str(fallback_error)}")
-            logging.debug(f"Fallback exception details: {fallback_error}", exc_info=True)  # Log the full exception details
-            return (
-                "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later. "
-                "For more accurate results, consider using the city name instead of the airport code."
-            )
+        return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
 
 def get_data_filename(origin, destination):
     return f"flight_prices_{origin}_{destination}.csv"
