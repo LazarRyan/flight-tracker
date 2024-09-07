@@ -347,11 +347,15 @@ def main():
                 # Dropdown for AI Tourism Advice
                 query_type = st.selectbox("What type of information are you looking for?", ["Attractions", "Restaurants", "Events", "General Travel Tips"])
 
+                # Store the query type in session state
+                if 'query_type' not in st.session_state:
+                    st.session_state.query_type = query_type
+
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
                 if st.button("Get Tourism Advice"):
                     try:
-                        advice = get_ai_tourism_advice(destination, query_type)
+                        advice = get_ai_tourism_advice(destination, st.session_state.query_type)
                         st.write(advice)
                     except Exception as e:
                         logging.error(f"Error in AI tourism advice: {str(e)}")
