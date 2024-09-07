@@ -326,8 +326,8 @@ def main():
                 st.info("The AI tourism advice is generated based on the destination airport code or city name. For more accurate results, consider using major airport codes or city names.")
 
             except Exception as e:
-                                st.error(f"An unexpected error occurred: {str(e)}")
-               		        logging.error(f"Unexpected error in main function: {str(e)}", exc_info=True)
+                st.error(f"An unexpected error occurred: {str(e)}")
+                logging.error(f"Unexpected error in main function: {str(e)}", exc_info=True)
 
     st.markdown("---")
     st.markdown("Developed with ❤️ for Tanner & Jill's wedding")
