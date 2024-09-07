@@ -15,6 +15,7 @@ import logging
 import random
 import json
 import openai
+import toml
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,21 +23,24 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
-# Access the OpenAI API key from Streamlit Cloud secrets
-openai.api_key = st.secrets["openai"]["OPENAI_API_KEY"]  # Use 'OPENAI_API_KEY' as defined in Streamlit Cloud
+# Load secrets from the secrets.toml file
+secrets = toml.load('.streamlit/secrets.toml')
+
+# Access the OpenAI API key using the correct key name
+openai.api_key = secrets['openai']['OPENAI_API_KEY']  # Use 'OPENAI_API_KEY' instead of 'api_key'
 
 # Initialize clients
 @st.cache_resource
 def initialize_clients():
     amadeus = Client(
-        client_id=st.secrets["AMADEUS_CLIENT_ID"],
-        client_secret=st.secrets["AMADEUS_CLIENT_SECRET"]
+        client_id=secrets["AMADEUS_CLIENT_ID"],
+        client_secret=secrets["AMADEUS_CLIENT_SECRET"]
     )
     credentials = service_account.Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"]
+        secrets["gcp_service_account"]
     )
     storage_client = storage.Client(credentials=credentials)
-    bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
+    bucket = storage_client.bucket(secrets["gcs_bucket_name"])
     return amadeus, bucket
 
 amadeus, bucket = initialize_clients()
