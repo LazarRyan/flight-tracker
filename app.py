@@ -193,13 +193,28 @@ def validate_input(origin, destination, outbound_date):
         return False
     return True
 
+def get_airport_info(airport_code):
+    # This is a placeholder function. You should replace it with a proper airport code database or API.
+    airport_info = {
+        'FCO': {'city': 'Rome', 'country': 'Italy'},
+        'MXP': {'city': 'Milan', 'country': 'Italy'},
+        'VCE': {'city': 'Venice', 'country': 'Italy'},
+        'NAP': {'city': 'Naples', 'country': 'Italy'},
+        # Add more airport codes as needed
+    }
+    return airport_info.get(airport_code, {'city': airport_code, 'country': 'Italy'})
+
 def get_ai_tourism_advice(destination):
+    airport_info = get_airport_info(destination)
+    city = airport_info['city']
+    country = airport_info['country']
+    
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful travel assistant providing concise advice about tourist attractions."},
-                {"role": "user", "content": f"Give me 3 must-visit attractions in {destination}, Italy. Provide a brief one-sentence description for each."}
+                {"role": "user", "content": f"Give me 3 must-visit attractions in {city}, {country}. Provide a brief one-sentence description for each."}
             ]
         )
         return response.choices[0].message['content']
@@ -212,28 +227,16 @@ def format_best_days_table(df):
     df = df.copy()
     df['departure'] = pd.to_datetime(df['departure']).dt.strftime('%B %d, %Y')
     df['Predicted Price'] = df['predicted_price'].apply(lambda x: f'${x:.2f}')
-    df['is_weekend'] = df['is_weekend'].map({0: 'No', 1: 'Yes'})
-    df['is_holiday'] = df['is_holiday'].map({0: 'No', 1: 'Yes'})
+    df['Weekend'] = df['is_weekend'].map({0: 'No', 1: 'Yes'})
+    df['Holiday'] = df['is_holiday'].map({0: 'No', 1: 'Yes'})
     df = df.rename(columns={
         'day_of_week': 'Day of Week',
         'month': 'Month',
         'day': 'Day',
-        'days_until_flight': 'Days Until Flight',
-        'is_weekend': 'Weekend',
-        'is_holiday': 'Holiday'
+        'days_until_flight': 'Days Until Flight'
     })
     columns_order = ['Day of Week', 'Month', 'Day', 'Days Until Flight', 'Weekend', 'Holiday', 'origin', 'destination', 'Predicted Price']
     return df[columns_order].set_index('departure')
-
-def get_city_name(airport_code):
-    # This is a placeholder function. You should replace it with a proper airport code to city name mapping.
-    airport_to_city = {
-        'NAP': 'Naples',
-        'FCO': 'Rome',
-        'MXP': 'Milan',
-        # Add more mappings as needed
-    }
-    return airport_to_city.get(airport_code, airport_code)
 
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
@@ -309,18 +312,21 @@ def main():
 
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
-                city = get_city_name(destination)
+                airport_info = get_airport_info(destination)
+                city = airport_info['city']
+                country = airport_info['country']
                 try:
-                    advice = get_ai_tourism_advice(city)
+                    advice = get_ai_tourism_advice(destination)
+                    st.write(f"Top attractions in {city}, {country}:")
                     st.write(advice)
                 except Exception as e:
                     logging.error(f"Error in AI tourism advice: {str(e)}")
-                    st.error(f"Sorry, I couldn't retrieve tourism advice at the moment. This could be due to API limitations or network issues. Please try again later or consider researching popular attractions in {city} online.")
+                    st.error(f"Sorry, I couldn't retrieve tourism advice for {city}, {country} at the moment. Please try again later.")
 
-                st.info("The AI tourism advice is generated based on the destination city. If you entered an airport code, we've attempted to map it to the corresponding city. For more accurate results, consider entering the city name directly.")
+                st.info("The AI tourism advice is generated based on the destination airport code or city name. For more accurate results, consider using major airport codes or city names.")
 
             except Exception as e:
-                st.error(f"An unexpected error occurred: {str(e)}")
+                                st.error(f"An unexpected error occurred: {str(e)}")
                 logging.error(f"Unexpected error in main function: {str(e)}", exc_info=True)
 
     st.markdown("---")
