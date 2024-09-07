@@ -197,6 +197,7 @@ def validate_input(origin, destination, outbound_date):
 
 def get_ai_tourism_advice(destination):
     try:
+        logging.debug(f"OpenAI API key: {openai.api_key[:5]}...{openai.api_key[-5:]}")
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
