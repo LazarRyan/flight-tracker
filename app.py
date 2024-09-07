@@ -24,6 +24,32 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 # Set page config
 st.set_page_config(page_title="Flight Price Predictor", layout="wide")
 
+import streamlit as st
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import mean_absolute_error
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+from amadeus import Client, ResponseError
+from google.cloud import storage
+from io import StringIO
+from google.oauth2 import service_account
+import logging
+import random
+import json
+import openai
+import sys
+import os
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
+
+# Set page config
+st.set_page_config(page_title="Flight Price Predictor", layout="wide")
+
 # Initialize clients
 @st.cache_resource
 def initialize_clients():
@@ -41,19 +67,10 @@ def initialize_clients():
         bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
         logging.info("GCS client initialized successfully")
 
-        # Try to get the API key from environment variable first (for Streamlit Cloud)
-        openai_api_key = os.environ.get("OPENAI_API_KEY")
-
-        # If not found in environment, try to get it from Streamlit secrets (for local development)
-        if not openai_api_key:
-            try:
-                openai_api_key = st.secrets["openai"]["OPENAI_API_KEY"]
-            except KeyError:
-                st.error("OPENAI_API_KEY not found in Streamlit secrets or environment variables. Please set it up properly.")
-                openai_api_key = None
-
+        # Get OpenAI API key from Streamlit secrets
+        openai_api_key = st.secrets["openai"]["OPENAI_API_KEY"]
         openai.api_key = openai_api_key
-        logging.info(f"OpenAI API key set: {openai_api_key[:5]}...{openai_api_key[-5:] if openai_api_key else 'Not Set'}")
+        logging.info(f"OpenAI API key set: {openai_api_key[:5]}...{openai_api_key[-5:]}")
 
         return amadeus, bucket
     except Exception as e:
@@ -256,7 +273,7 @@ def main():
 
     # Debug information
     st.sidebar.subheader("Debug Information")
-    st.sidebar.write(f"OpenAI API Key: {openai.api_key[:5]}...{openai.api_key[-5:] if openai.api_key else 'Not Set'}")
+    st.sidebar.write(f"OpenAI API Key: {st.secrets['openai']['OPENAI_API_KEY'][:5]}...{st.secrets['openai']['OPENAI_API_KEY'][-5:]}")
     st.sidebar.write(f"Amadeus Client ID: {st.secrets['AMADEUS_CLIENT_ID'][:5]}...")
     st.sidebar.write(f"GCS Bucket: {st.secrets['gcs_bucket_name']}")
 
