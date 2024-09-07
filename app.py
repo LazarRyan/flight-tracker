@@ -327,7 +327,7 @@ def main():
 
             except Exception as e:
                                 st.error(f"An unexpected error occurred: {str(e)}")
-                logging.error(f"Unexpected error in main function: {str(e)}", exc_info=True)
+               		        logging.error(f"Unexpected error in main function: {str(e)}", exc_info=True)
 
     st.markdown("---")
     st.markdown("Developed with ❤️ for Tanner & Jill's wedding")
