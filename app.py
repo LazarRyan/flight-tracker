@@ -32,17 +32,17 @@ def initialize_clients():
             client_secret=st.secrets["AMADEUS_CLIENT_SECRET"]
         )
         logging.info("Amadeus client initialized successfully")
-        
+
         credentials = service_account.Credentials.from_service_account_info(
             st.secrets["gcp_service_account"]
         )
         storage_client = storage.Client(credentials=credentials)
         bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
         logging.info("GCS client initialized successfully")
-        
+
         openai.api_key = st.secrets["OPENAI_API_KEY"]
         logging.info(f"OpenAI API key set: {openai.api_key[:5]}...{openai.api_key[-5:]}")
-        
+
         return amadeus, bucket
     except Exception as e:
         logging.error(f"Error initializing clients: {str(e)}")
@@ -81,7 +81,7 @@ def should_call_api(origin, destination):
     api_calls_file = "api_calls.json"
     blob = bucket.blob(api_calls_file)
     now = datetime.now()
-    
+
     try:
         content = blob.download_as_text()
         api_calls = json.loads(content)
@@ -91,13 +91,15 @@ def should_call_api(origin, destination):
     route_key = f"{origin}-{destination}"
     if route_key in api_calls:
         last_call_time = datetime.fromisoformat(api_calls[route_key])
-        if now - last_call_time < timedelta(hours=12):
-            return False
-
+        time_since_last_call = now - last_call_time
+        if time_since_last_call < timedelta(hours=12):
+            time_until_next_call = timedelta(hours=12) - time_since_last_call
+            return False, time_until_next_call
+    
     api_calls[route_key] = now.isoformat()
     blob.upload_from_string(json.dumps(api_calls), content_type="application/json")
 
-    return True
+    return True, timedelta(0)
 
 def fetch_and_process_data(origin, destination, start_date, end_date):
     all_data = []
@@ -148,7 +150,7 @@ def engineer_features(df):
     df['day'] = df['departure'].dt.day
     df['days_until_flight'] = (df['departure'] - datetime.now()).dt.days
     df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
-    df['is_holiday'] = ((df['month'] == 12) & (df['day'].isin([24, 25, 31])) | 
+    df['is_holiday'] = ((df['month'] == 12) & (df['day'].isin([24, 25, 31])) |
                         (df['month'] == 1) & (df['day'] == 1)).astype(int)
     return df
 
@@ -156,24 +158,24 @@ def train_model(df):
     features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday']
     X = df[features]
     y = df['price']
-    
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
+
     param_grid = {
         'n_estimators': [100, 200],
         'max_depth': [3, 4, 5],
         'learning_rate': [0.01, 0.1]
     }
-    
+
     model = GridSearchCV(GradientBoostingRegressor(random_state=42), param_grid, cv=5)
     model.fit(X_train, y_train)
-    
+
     train_predictions = model.predict(X_train)
     test_predictions = model.predict(X_test)
-    
+
     train_mae = mean_absolute_error(y_train, train_predictions)
     test_mae = mean_absolute_error(y_test, test_predictions)
-    
+
     return model.best_estimator_, train_mae, test_mae
 
 def predict_prices(model, start_date, end_date, origin, destination):
@@ -182,10 +184,10 @@ def predict_prices(model, start_date, end_date, origin, destination):
     future_data = engineer_features(future_data)
     future_data['origin'] = origin
     future_data['destination'] = destination
-    
+
     features = ['day_of_week', 'month', 'day', 'days_until_flight', 'is_weekend', 'is_holiday']
     future_data['predicted_price'] = model.predict(future_data[features])
-    
+
     return future_data
 
 def plot_prices(df, title):
@@ -268,7 +270,9 @@ def main():
                 else:
                     st.info(f"No existing data found for {origin} to {destination}. Will fetch new data.")
 
-                if should_call_api(origin, destination):
+                can_call_api, time_until_next_call = should_call_api(origin, destination)
+
+                if can_call_api:
                     st.info("Fetching new data from API...")
                     new_data = fetch_and_process_data(origin, destination, datetime.now().date(), outbound_date)
                     if not new_data.empty:
@@ -279,7 +283,9 @@ def main():
                     else:
                         st.warning("Unable to fetch new data from API. Proceeding with existing data.")
                 else:
-                    st.info("API call limit reached for this route. Using existing data.")
+                    hours, remainder = divmod(time_until_next_call.seconds, 3600)
+                    minutes, _ = divmod(remainder, 60)
+                    st.info(f"API call limit reached for this route. Using existing data. Next API call possible in {hours} hours and {minutes} minutes.")
 
                 if existing_data.empty:
                     st.error("No data available for prediction. Please try again later or with a different route.")
