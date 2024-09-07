@@ -15,6 +15,7 @@ import logging
 import random
 import json
 import openai
+import wikipediaapi
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -49,8 +50,19 @@ def get_ai_tourism_advice(destination, query_type):
     if cache_key in tourism_cache:
         return tourism_cache[cache_key]
 
+    # Initialize Wikipedia API
+    wiki_wiki = wikipediaapi.Wikipedia('en')
+
+    # Fetch information from Wikipedia
+    page = wiki_wiki.page(destination)
+    if page.exists():
+        logging.info(f"Fetched information from Wikipedia for {destination}.")
+        advice = f"**{page.title}**\n\n{page.summary}\n\n[Read more on Wikipedia]({page.fullurl})"
+        tourism_cache[cache_key] = advice  # Cache the response
+        return advice
+
+    # If Wikipedia information is not found, fall back to GPT
     try:
-        # Primary query to the AI for detailed tourism advice
         logging.info(f"Querying AI for destination: {destination}, query type: {query_type}")
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -85,26 +97,6 @@ def get_ai_tourism_advice(destination, query_type):
         except Exception as fallback_error:
             logging.error(f"Fallback error in AI tourism advice: {str(fallback_error)}")
             logging.debug(f"Fallback exception details: {fallback_error}", exc_info=True)  # Log the full exception details
-            return (
-                "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later. "
-                "For more accurate results, consider using the city name instead of the airport code."
-            )
-        
-        # Fallback mechanism: Try using a more general query
-        try:
-            city_name = destination  # You might want to map airport codes to city names for better results
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful travel assistant."},
-                    {"role": "user", "content": f"Can you provide some general travel tips and attractions for the city corresponding to the IATA code '{city_name}', Italy?"}
-                ]
-            )
-            advice = response.choices[0].message['content']
-            tourism_cache[cache_key] = advice  # Cache the response
-            return advice
-        except Exception as fallback_error:
-            logging.error(f"Fallback error in AI tourism advice: {str(fallback_error)}")
             return (
                 "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later. "
                 "For more accurate results, consider using the city name instead of the airport code."
