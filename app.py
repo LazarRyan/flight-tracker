@@ -236,6 +236,13 @@ def format_best_days_table(df):
         'days_until_flight': 'Days Until Flight'
     })
     columns_order = ['Day of Week', 'Month', 'Day', 'Days Until Flight', 'Weekend', 'Holiday', 'origin', 'destination', 'Predicted Price']
+    
+    # Check if 'origin' and 'destination' columns exist
+    if 'origin' not in df.columns or 'destination' not in df.columns:
+        logging.error(f"'origin' or 'destination' columns not found. Columns: {df.columns.tolist()}")
+        # Remove 'origin' and 'destination' from columns_order if they don't exist
+        columns_order = [col for col in columns_order if col in df.columns]
+    
     return df[columns_order].set_index('departure')
 
 def main():
@@ -299,8 +306,12 @@ def main():
 
                 best_days = future_prices.nsmallest(5, 'predicted_price')
                 st.subheader("💰 Best Days to Book")
-                formatted_best_days = format_best_days_table(best_days)
-                st.table(formatted_best_days)
+                if 'origin' in best_days.columns and 'destination' in best_days.columns:
+                    formatted_best_days = format_best_days_table(best_days)
+                    st.table(formatted_best_days)
+                else:
+                    st.error("Unable to display best days table due to missing 'origin' or 'destination' information.")
+                    logging.error(f"Columns in best_days: {best_days.columns.tolist()}")
 
                 avg_price = future_prices['predicted_price'].mean()
                 st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
