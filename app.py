@@ -193,28 +193,13 @@ def validate_input(origin, destination, outbound_date):
         return False
     return True
 
-def get_airport_info(airport_code):
-    # This is a placeholder function. You should replace it with a proper airport code database or API.
-    airport_info = {
-        'FCO': {'city': 'Rome', 'country': 'Italy'},
-        'MXP': {'city': 'Milan', 'country': 'Italy'},
-        'VCE': {'city': 'Venice', 'country': 'Italy'},
-        'NAP': {'city': 'Naples', 'country': 'Italy'},
-        # Add more airport codes as needed
-    }
-    return airport_info.get(airport_code, {'city': airport_code, 'country': 'Italy'})
-
 def get_ai_tourism_advice(destination):
-    airport_info = get_airport_info(destination)
-    city = airport_info['city']
-    country = airport_info['country']
-    
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful travel assistant providing concise advice about tourist attractions."},
-                {"role": "user", "content": f"Give me 3 must-visit attractions in {city}, {country}. Provide a brief one-sentence description for each."}
+                {"role": "system", "content": "You are a helpful travel assistant providing detailed advice about tourist attractions."},
+                {"role": "user", "content": f"Provide detailed information about {destination}, Italy, including must-visit attractions and cultural insights."}
             ]
         )
         return response.choices[0].message['content']
@@ -225,25 +210,12 @@ def get_ai_tourism_advice(destination):
 
 def format_best_days_table(df):
     df = df.copy()
-    df['departure'] = pd.to_datetime(df['departure']).dt.strftime('%B %d, %Y')
+    df['departure'] = df['departure'].dt.strftime('%B %d, %Y')
     df['Predicted Price'] = df['predicted_price'].apply(lambda x: f'${x:.2f}')
     df['Weekend'] = df['is_weekend'].map({0: 'No', 1: 'Yes'})
     df['Holiday'] = df['is_holiday'].map({0: 'No', 1: 'Yes'})
-    df = df.rename(columns={
-        'day_of_week': 'Day of Week',
-        'month': 'Month',
-        'day': 'Day',
-        'days_until_flight': 'Days Until Flight'
-    })
-    columns_order = ['Day of Week', 'Month', 'Day', 'Days Until Flight', 'Weekend', 'Holiday', 'origin', 'destination', 'Predicted Price']
-    
-    # Check if 'origin' and 'destination' columns exist
-    if 'origin' not in df.columns or 'destination' not in df.columns:
-        logging.error(f"'origin' or 'destination' columns not found. Columns: {df.columns.tolist()}")
-        # Remove 'origin' and 'destination' from columns_order if they don't exist
-        columns_order = [col for col in columns_order if col in df.columns]
-    
-    return df[columns_order].set_index('departure')
+    df = df.drop(['predicted_price', 'is_weekend', 'is_holiday'], axis=1)
+    return df.set_index('departure')
 
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
@@ -306,12 +278,8 @@ def main():
 
                 best_days = future_prices.nsmallest(5, 'predicted_price')
                 st.subheader("💰 Best Days to Book")
-                if 'origin' in best_days.columns and 'destination' in best_days.columns:
-                    formatted_best_days = format_best_days_table(best_days)
-                    st.table(formatted_best_days)
-                else:
-                    st.error("Unable to display best days table due to missing 'origin' or 'destination' information.")
-                    logging.error(f"Columns in best_days: {best_days.columns.tolist()}")
+                formatted_best_days = format_best_days_table(best_days)
+                st.table(formatted_best_days)
 
                 avg_price = future_prices['predicted_price'].mean()
                 st.metric(label="💵 Average Predicted Price", value=f"${avg_price:.2f}")
@@ -323,18 +291,15 @@ def main():
 
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
-                airport_info = get_airport_info(destination)
-                city = airport_info['city']
-                country = airport_info['country']
+                city = destination  # You might want to map airport codes to city names for better results
                 try:
-                    advice = get_ai_tourism_advice(destination)
-                    st.write(f"Top attractions in {city}, {country}:")
+                    advice = get_ai_tourism_advice(city)
                     st.write(advice)
                 except Exception as e:
                     logging.error(f"Error in AI tourism advice: {str(e)}")
-                    st.error(f"Sorry, I couldn't retrieve tourism advice for {city}, {country} at the moment. Please try again later.")
+                    st.error("Sorry, I couldn't retrieve tourism advice at the moment. Please try again later.")
 
-                st.info("The AI tourism advice is generated based on the destination airport code or city name. For more accurate results, consider using major airport codes or city names.")
+                st.info("The AI tourism advice is generated based on the destination airport code. For more accurate results, consider using the city name instead of the airport code.")
 
             except Exception as e:
                 st.error(f"An unexpected error occurred: {str(e)}")
