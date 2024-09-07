@@ -40,6 +40,50 @@ def initialize_clients():
 
 amadeus, bucket = initialize_clients()
 
+# Caching for tourism advice
+tourism_cache = {}
+
+def get_ai_tourism_advice(destination, query_type):
+    # Check if the response is cached
+    cache_key = f"{destination}-{query_type}"
+    if cache_key in tourism_cache:
+        return tourism_cache[cache_key]
+
+    try:
+        # Primary query to the AI for detailed tourism advice
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an ex-air traffic controller with extensive knowledge of IATA codes and tourist attractions."},
+                {"role": "user", "content": f"Using the IATA code '{destination}', provide detailed information about the corresponding city in Italy. Include must-visit attractions, cultural insights, travel tips, and any current events or festivals happening in the area."}
+            ]
+        )
+        advice = response.choices[0].message['content']
+        tourism_cache[cache_key] = advice  # Cache the response
+        return advice
+    except Exception as e:
+        logging.error(f"Error in AI tourism advice: {str(e)}")
+        
+        # Fallback mechanism: Try using a more general query
+        try:
+            city_name = destination  # You might want to map airport codes to city names for better results
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful travel assistant."},
+                    {"role": "user", "content": f"Can you provide some general travel tips and attractions for the city corresponding to the IATA code '{city_name}', Italy?"}
+                ]
+            )
+            advice = response.choices[0].message['content']
+            tourism_cache[cache_key] = advice  # Cache the response
+            return advice
+        except Exception as fallback_error:
+            logging.error(f"Fallback error in AI tourism advice: {str(fallback_error)}")
+            return (
+                "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later. "
+                "For more accurate results, consider using the city name instead of the airport code."
+            )
+
 def get_data_filename(origin, destination):
     return f"flight_prices_{origin}_{destination}.csv"
 
@@ -193,49 +237,6 @@ def validate_input(origin, destination, outbound_date):
         return False
     return True
 
-def get_ai_tourism_advice(destination):
-    try:
-        # Primary query to the AI for detailed tourism advice
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a knowledgeable travel assistant."},
-                {"role": "user", "content": f"Please provide detailed information about {destination}, Italy. Include must-visit attractions, cultural insights, travel tips, and any current events or festivals happening in the area."}
-            ]
-        )
-        return response.choices[0].message['content']
-    except Exception as e:
-        logging.error(f"Error in AI tourism advice: {str(e)}")
-        
-        # Fallback mechanism: Try using a more general query
-        try:
-            # Suggest using a city name if the destination is an airport code
-            city_name = destination  # You might want to map airport codes to city names for better results
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful travel assistant."},
-                    {"role": "user", "content": f"Can you provide some general travel tips and attractions for {city_name}, Italy?"}
-                ]
-            )
-            return response.choices[0].message['content']
-        except Exception as fallback_error:
-            logging.error(f"Fallback error in AI tourism advice: {str(fallback_error)}")
-            return (
-                "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later. "
-                "For more accurate results, consider using the city name instead of the airport code."
-            )
-
-
-def format_best_days_table(df):
-    df = df.copy()
-    df['departure'] = df['departure'].dt.strftime('%B %d, %Y')
-    df['Predicted Price'] = df['predicted_price'].apply(lambda x: f'${x:.2f}')
-    df['Weekend'] = df['is_weekend'].map({0: 'No', 1: 'Yes'})
-    df['Holiday'] = df['is_holiday'].map({0: 'No', 1: 'Yes'})
-    df = df.drop(['predicted_price', 'is_weekend', 'is_holiday'], axis=1)
-    return df.set_index('departure')
-
 def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
@@ -247,6 +248,8 @@ def main():
         outbound_date = st.date_input("🗓️ Outbound Flight Date", value=datetime(2025, 9, 10))
     with col2:
         destination = st.text_input("🛬 Destination Airport Code in Italy", "").upper()
+
+    query_type = st.selectbox("What type of information are you looking for?", ["Attractions", "Restaurants", "Events", "General Travel Tips"])
 
     if st.button("🔍 Predict Prices"):
         if not validate_input(origin, destination, outbound_date):
@@ -310,9 +313,8 @@ def main():
 
                 # AI Tourism Advice
                 st.subheader("🏛️ AI Tourism Advice")
-                city = destination  # You might want to map airport codes to city names for better results
                 try:
-                    advice = get_ai_tourism_advice(city)
+                    advice = get_ai_tourism_advice(destination, query_type)
                     st.write(advice)
                 except Exception as e:
                     logging.error(f"Error in AI tourism advice: {str(e)}")
