@@ -1,0 +1,30 @@
+services:
+  frontend:
+    build:
+      context: ./flight-search-service/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./flight-search-service/backend
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - AMADEUS_CLIENT_ID=${AMADEUS_CLIENT_ID}
+      - AMADEUS_CLIENT_SECRET=${AMADEUS_CLIENT_SECRET}
+      - GCP_SERVICE_ACCOUNT=${GCP_SERVICE_ACCOUNT}
+      - GCS_BUCKET_NAME=${GCS_BUCKET_NAME}
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

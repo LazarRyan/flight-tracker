@@ -43,15 +43,23 @@ def initialize_clients():
         bucket = storage_client.bucket(st.secrets["gcs_bucket_name"])
         logging.info("GCS client initialized successfully")
 
-        openai.api_key = st.secrets["OPENAI_API_KEY"]
-        logging.info(f"OpenAI API key set: {openai.api_key[:5]}...{openai.api_key[-5:]}")
+        openai_client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+        logging.info("OpenAI client initialized successfully")
 
-        return amadeus, bucket
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=st.secrets["aws"]["access_key_id"],
+            aws_secret_access_key=st.secrets["aws"]["secret_access_key"],
+            region_name='us-east-2'
+        )
+        logging.info("AWS S3 client initialized successfully")
+
+        return amadeus, bucket, openai_client, s3_client
     except Exception as e:
         logging.error(f"Error initializing clients: {str(e)}")
         raise
 
-amadeus, bucket = initialize_clients()
+amadeus, bucket, openai_client, s3_client = initialize_clients()
 
 def get_data_filename(origin, destination):
     return f"flight_prices_{origin}_{destination}.csv"
@@ -208,18 +216,34 @@ def validate_input(origin, destination, outbound_date):
         return False
     return True
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+def save_advice_to_s3(destination, advice):
+    bucket_name = 'flightai'  # Replace with your actual bucket name
+    file_name = f"{destination.lower().replace(' ', '_')}_advice.txt"
+    try:
+        s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=advice)
+        return True
+    except NoCredentialsError:
+        st.error("AWS credentials not available")
+        return False
+    except Exception as e:
+        st.error(f"Error saving to S3: {str(e)}")
+        return False
 
 def get_ai_tourism_advice(destination):
     try:
-        response = client.chat.completions.create(
+        response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful travel assistant providing detailed advice about tourist attractions."},
                 {"role": "user", "content": f"Provide detailed information about {destination}, including must-visit attractions and cultural insights."}
             ]
         )
-        return response.choices[0].message.content
+        advice = response.choices[0].message.content
+        if save_advice_to_s3(destination, advice):
+            st.success("Advice saved to S3 successfully!")
+        else:
+            st.warning("Failed to save advice to S3.")
+        return advice
     except Exception as e:
         st.error(f"Error: {str(e)}")
         return "Sorry, I couldn't retrieve tourism advice at the moment. Please try again later."
@@ -237,13 +261,19 @@ def main():
     st.title("✈️ Flight Price Predictor for Italy 2025")
     st.write("Plan your trip to Italy for Tanner & Jill's wedding!")
 
+    # Debug information
+    st.sidebar.subheader("Debug Information")
+    st.sidebar.write(f"OpenAI API Key: {openai_client.api_key[:5]}...{openai_client.api_key[-5:]}")
+    st.sidebar.write(f"Amadeus Client ID: {st.secrets['AMADEUS_CLIENT_ID'][:5]}...")
+    st.sidebar.write(f"GCS Bucket: {st.secrets['gcs_bucket_name']}")
+
     col1, col2 = st.columns(2)
 
     with col1:
         origin = st.text_input("🛫 Origin Airport Code", "").upper()
         outbound_date = st.date_input("🗓️ Outbound Flight Date", value=datetime(2025, 9, 10))
     with col2:
-        destination = st.text_input("🛬 Destination Airport Code", "").upper()
+        destination = st.text_input("🛬 Destination Airport Code in Italy", "").upper()
 
     if st.button("🔍 Predict Prices"):
         if not validate_input(origin, destination, outbound_date):

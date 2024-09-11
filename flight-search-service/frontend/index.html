@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Price Predictor</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Flight Price Predictor</h1>
+        
+        <form id="prediction-form">
+            <div class="form-group">
+                <label for="origin">Origin Airport Code:</label>
+                <input type="text" id="origin" name="origin" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="destination">Destination Airport Code:</label>
+                <input type="text" id="destination" name="destination" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="date">Departure Date:</label>
+                <input type="date" id="date" name="date" required>
+            </div>
+            
+            <button type="submit">Predict Prices</button>
+        </form>
+
+        <div id="error-message" style="display: none; color: red;"></div>
+
+        <div id="loading" style="display: none;">
+            Loading... Please wait.
+        </div>
+
+        <div id="results" style="display: none;">
+            <h2>Prediction Results</h2>
+            
+            <div class="summary">
+                <p>Average Price: <span id="average-price"></span></p>
+                <p>Minimum Price: <span id="min-price"></span></p>
+                <p>Maximum Price: <span id="max-price"></span></p>
+                <p>Accuracy: <span id="accuracy"></span></p>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="price-chart"></canvas>
+            </div>
+
+            <div class="best-days">
+                <h3>Best Days to Book</h3>
+                <ul id="best-days-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
