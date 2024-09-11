@@ -213,7 +213,8 @@ def train_model(df):
     return model.best_estimator_, train_mae, test_mae
 
 def predict_prices(model, start_date, end_date, origin, destination):
-    date_range = pd.date_range(start=start_date, end=end_date)
+    today = datetime.now().date()
+    date_range = pd.date_range(start=max(today, start_date.date()), end=end_date.date())
     future_data = pd.DataFrame({'departure': date_range})
     future_data = engineer_features(future_data)
     future_data['origin'] = origin
@@ -230,18 +231,22 @@ def predict():
         data = request.json
         origin = data['origin']
         destination = data['destination']
-        start_date = datetime.strptime(data['date'], '%Y-%m-%d')
+        departure_date = datetime.strptime(data['date'], '%Y-%m-%d')
 
-        logging.info(f"Received prediction request for {origin}-{destination} starting from {start_date}")
+        logging.info(f"Received prediction request for {origin}-{destination} departing on {departure_date}")
 
-        df = update_data(origin, destination, start_date)
-        
+        df = update_data(origin, destination, departure_date)
+
         df = engineer_features(df)
         model, train_mae, test_mae = train_model(df)
 
         logging.info(f"Model trained. Estimated price accuracy: ±${test_mae:.2f} (based on test data)")
 
-        future_prices = predict_prices(model, start_date, start_date + relativedelta(months=12), origin, destination)
+        today = datetime.now()
+        future_prices = predict_prices(model, today, departure_date, origin, destination)
+
+        # Filter out past dates
+        future_prices = future_prices[future_prices['departure'] >= today]
 
         result = {
             'dates': future_prices['departure'].dt.strftime('%Y-%m-%d').tolist(),
@@ -251,6 +256,13 @@ def predict():
             'max': float(future_prices['predicted_price'].max()),
             'accuracy': float(test_mae)
         }
+
+        # Calculate best days to book (lowest prices)
+        best_days = future_prices.nsmallest(5, 'predicted_price')[['departure', 'predicted_price']]
+        result['best_days'] = [
+            {'date': d.strftime('%Y-%m-%d'), 'price': float(p)}
+            for d, p in zip(best_days['departure'], best_days['predicted_price'])
+        ]
 
         return jsonify(result)
 

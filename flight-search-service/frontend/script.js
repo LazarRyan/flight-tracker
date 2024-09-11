@@ -28,54 +28,33 @@ function fetchPrediction(data) {
 
 // Function to update the UI with prediction results
 function updateUI(data) {
-    const loadingElement = document.getElementById('loading');
-    const resultsElement = document.getElementById('results');
-    
-    if (loadingElement) loadingElement.style.display = 'none';
-    if (resultsElement) resultsElement.style.display = 'block';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
 
-    updateElement('average-price', `$${data.average.toFixed(2)}`);
-    updateElement('min-price', `$${data.min.toFixed(2)}`);
-    updateElement('max-price', `$${data.max.toFixed(2)}`);
-    updateElement('accuracy', `±$${data.accuracy.toFixed(2)}`);
+    document.getElementById('average-price').textContent = `$${data.average.toFixed(2)}`;
+    document.getElementById('min-price').textContent = `$${data.min.toFixed(2)}`;
+    document.getElementById('max-price').textContent = `$${data.max.toFixed(2)}`;
+    document.getElementById('accuracy').textContent = `±$${data.accuracy.toFixed(2)}`;
 
     createOrUpdateChart(data.dates, data.prices);
-    displayBestDays(data.dates, data.prices);
-}
-
-// Helper function to safely update element text content
-function updateElement(id, text) {
-    const element = document.getElementById(id);
-    if (element) element.textContent = text;
+    displayBestDays(data.best_days);
 }
 
 // Function to create or update the chart
 function createOrUpdateChart(dates, prices) {
-    let ctx = document.getElementById('price-chart');
-    if (!ctx) {
-        console.log('Chart canvas not found, creating one');
-        const resultsElement = document.getElementById('results');
-        if (resultsElement) {
-            ctx = document.createElement('canvas');
-            ctx.id = 'price-chart';
-            resultsElement.appendChild(ctx);
-        } else {
-            console.error('Results element not found, cannot create chart');
-            return;
-        }
-    }
+    const ctx = document.getElementById('price-chart').getContext('2d');
 
     if (chart) {
         chart.destroy();
     }
 
-    chart = new Chart(ctx.getContext('2d'), {
+    chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: dates,
             datasets: [{
                 label: 'Predicted Price',
-                data: prices,
+                data: prices.map((price, index) => ({x: dates[index], y: price})),
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.1
             }]
@@ -83,17 +62,24 @@ function createOrUpdateChart(dates, prices) {
         options: {
             responsive: true,
             scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day',
+                        displayFormats: {
+                            day: 'MMM d'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                },
                 y: {
                     beginAtZero: false,
                     title: {
                         display: true,
                         text: 'Price ($)'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Date'
                     }
                 }
             }
@@ -102,27 +88,9 @@ function createOrUpdateChart(dates, prices) {
 }
 
 // Function to display best days to book
-function displayBestDays(dates, prices) {
-    let bestDaysList = document.getElementById('best-days-list');
-    if (!bestDaysList) {
-        console.log('Best days list element not found, creating one');
-        const resultsElement = document.getElementById('results');
-        if (resultsElement) {
-            bestDaysList = document.createElement('ul');
-            bestDaysList.id = 'best-days-list';
-            resultsElement.appendChild(bestDaysList);
-        } else {
-            console.error('Results element not found, cannot create best days list');
-            return;
-        }
-    }
-
-    const bestDays = dates.map((date, index) => ({ date, price: prices[index] }))
-        .sort((a, b) => a.price - b.price)
-        .slice(0, 5);
-
+function displayBestDays(bestDays) {
+    const bestDaysList = document.getElementById('best-days-list');
     bestDaysList.innerHTML = '';
-
     bestDays.forEach(day => {
         const li = document.createElement('li');
         li.textContent = `${day.date}: $${day.price.toFixed(2)}`;
@@ -133,50 +101,33 @@ function displayBestDays(dates, prices) {
 // Function to display error messages
 function displayError(message) {
     const errorElement = document.getElementById('error-message');
-    const loadingElement = document.getElementById('loading');
-    
-    if (errorElement) {
-        errorElement.textContent = message;
-        errorElement.style.display = 'block';
-    }
-    
-    if (loadingElement) {
-        loadingElement.style.display = 'none';
-    }
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+    document.getElementById('loading').style.display = 'none';
 }
 
 // Event listener for form submission
+document.getElementById('prediction-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    document.getElementById('error-message').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+
+    const origin = document.getElementById('origin').value.toUpperCase();
+    const destination = document.getElementById('destination').value.toUpperCase();
+    const date = document.getElementById('date').value;
+
+    if (!origin || !destination || !date) {
+        displayError('Please fill in all fields.');
+        return;
+    }
+
+    fetchPrediction({origin, destination, date});
+});
+
+// Initialize date picker with a minimum date of today
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('prediction-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const errorElement = document.getElementById('error-message');
-            const loadingElement = document.getElementById('loading');
-            const resultsElement = document.getElementById('results');
-
-            if (errorElement) errorElement.style.display = 'none';
-            if (loadingElement) loadingElement.style.display = 'block';
-            if (resultsElement) resultsElement.style.display = 'none';
-
-            const origin = document.getElementById('origin')?.value.toUpperCase();
-            const destination = document.getElementById('destination')?.value.toUpperCase();
-            const date = document.getElementById('date')?.value;
-
-            if (!origin || !destination || !date) {
-                displayError('Please fill in all fields.');
-                return;
-            }
-
-            fetchPrediction({origin, destination, date});
-        });
-    }
-
-    // Initialize date picker with a minimum date of today
     const dateInput = document.getElementById('date');
-    if (dateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.min = today;
-    }
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
 });
