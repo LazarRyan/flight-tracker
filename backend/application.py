@@ -21,8 +21,10 @@ import numpy as np
 load_dotenv(override=True)
 
 # Initialize Flask app and enable CORS
+S3_FRONTEND_URL = "http://flight-tracker-dev.s3-website-us-east-2.amazonaws.com"
+   
 application = Flask(__name__)
-CORS(application, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+CORS(application, resources={r"/api/*": {"origins": S3_FRONTEND_URL}})
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

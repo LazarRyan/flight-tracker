@@ -1,0 +1,161 @@
+2024-09-12 23:01:34,726 [INFO] -----------------------Starting build-----------------------
+2024-09-12 23:01:34,744 [INFO] Running configSets: _OnInstanceBoot
+2024-09-12 23:01:34,754 [INFO] Running configSet _OnInstanceBoot
+2024-09-12 23:01:34,764 [INFO] Running config AWSEBBaseConfig
+2024-09-12 23:01:35,113 [INFO] Command clearbackupfiles succeeded
+2024-09-12 23:01:35,124 [INFO] Running config AWSEBCfnHupEndpointOverride
+2024-09-12 23:01:35,135 [INFO] Command clearbackupfiles succeeded
+2024-09-12 23:01:35,138 [INFO] ConfigSets completed
+2024-09-12 23:01:35,139 [INFO] -----------------------Build complete-----------------------
+2024-09-12 23:03:48,391 [INFO] -----------------------Starting build-----------------------
+2024-09-12 23:03:48,398 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-12 23:03:48,401 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-12 23:03:48,401 [INFO] ConfigSets completed
+2024-09-12 23:03:48,401 [INFO] -----------------------Build complete-----------------------
+2024-09-12 23:05:28,287 [INFO] -----------------------Starting build-----------------------
+2024-09-12 23:05:28,302 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-12 23:05:28,305 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-12 23:05:28,307 [INFO] ConfigSets completed
+2024-09-12 23:05:28,307 [INFO] -----------------------Build complete-----------------------
+2024-09-13 02:50:44,252 [INFO] -----------------------Starting build-----------------------
+2024-09-13 02:50:44,257 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 02:50:44,260 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 02:50:44,260 [INFO] ConfigSets completed
+2024-09-13 02:50:44,260 [INFO] -----------------------Build complete-----------------------
+2024-09-13 02:58:57,109 [INFO] -----------------------Starting build-----------------------
+2024-09-13 02:58:57,121 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 02:58:57,126 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 02:58:57,126 [INFO] ConfigSets completed
+2024-09-13 02:58:57,126 [INFO] -----------------------Build complete-----------------------
+2024-09-13 04:10:17,855 [INFO] -----------------------Starting build-----------------------
+2024-09-13 04:10:17,867 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 04:10:17,871 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 04:10:17,871 [INFO] ConfigSets completed
+2024-09-13 04:10:17,871 [INFO] -----------------------Build complete-----------------------
+2024-09-13 04:13:41,812 [INFO] -----------------------Starting build-----------------------
+2024-09-13 04:13:41,818 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 04:13:41,821 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 04:13:41,821 [INFO] ConfigSets completed
+2024-09-13 04:13:41,821 [INFO] -----------------------Build complete-----------------------
+2024-09-13 04:26:57,445 [INFO] -----------------------Starting build-----------------------
+2024-09-13 04:26:57,451 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 04:26:57,454 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 04:26:57,457 [INFO] Running config prebuild_0_flight_tracker_app
+2024-09-13 04:26:57,461 [INFO] Running config prebuild_1_flight_tracker_app
+2024-09-13 04:27:10,405 [INFO] Yum installed ['python3-devel']
+2024-09-13 04:27:10,409 [INFO] ConfigSets completed
+2024-09-13 04:27:10,409 [INFO] -----------------------Build complete-----------------------
+2024-09-13 04:27:13,133 [INFO] -----------------------Starting build-----------------------
+2024-09-13 04:27:13,139 [INFO] Running configSets: Infra-EmbeddedPostBuild
+2024-09-13 04:27:13,142 [INFO] Running configSet Infra-EmbeddedPostBuild
+2024-09-13 04:27:13,145 [INFO] Running config postbuild_0_flight_tracker_app
+2024-09-13 04:27:16,189 [INFO] Command 01_pip_upgrade succeeded
+2024-09-13 04:27:16,669 [ERROR] Command 02_pip_install (/var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt) failed
+2024-09-13 04:27:16,669 [ERROR] Error encountered during build of postbuild_0_flight_tracker_app: Command 02_pip_install failed
+Traceback (most recent call last):
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 579, in run_config
+    CloudFormationCarpenter(config, self._auth_config, self.strict_mode).build(worklog)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 278, in build
+    self._config.commands)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/command_tool.py", line 127, in apply
+    raise ToolError(u"Command %s failed" % name)
+cfnbootstrap.construction_errors.ToolError: Command 02_pip_install failed
+2024-09-13 04:27:16,672 [ERROR] -----------------------BUILD FAILED!------------------------
+2024-09-13 04:27:16,672 [ERROR] Unhandled exception during build: Command 02_pip_install failed
+Traceback (most recent call last):
+  File "/opt/aws/bin/cfn-init", line 181, in <module>
+    worklog.build(metadata, configSets, strict_mode)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 137, in build
+    Contractor(metadata, strict_mode).build(configSets, self)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 567, in build
+    self.run_config(config, worklog)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 579, in run_config
+    CloudFormationCarpenter(config, self._auth_config, self.strict_mode).build(worklog)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 278, in build
+    self._config.commands)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/command_tool.py", line 127, in apply
+    raise ToolError(u"Command %s failed" % name)
+cfnbootstrap.construction_errors.ToolError: Command 02_pip_install failed
+2024-09-13 04:43:27,452 [INFO] -----------------------Starting build-----------------------
+2024-09-13 04:43:27,462 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 04:43:27,465 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 04:43:27,477 [INFO] Running config prebuild_0_flight_tracker_app
+2024-09-13 04:43:27,490 [INFO] Running config prebuild_1_flight_tracker_app
+2024-09-13 04:43:29,945 [INFO] ConfigSets completed
+2024-09-13 04:43:29,946 [INFO] -----------------------Build complete-----------------------
+2024-09-13 04:43:32,592 [INFO] -----------------------Starting build-----------------------
+2024-09-13 04:43:32,598 [INFO] Running configSets: Infra-EmbeddedPostBuild
+2024-09-13 04:43:32,601 [INFO] Running configSet Infra-EmbeddedPostBuild
+2024-09-13 04:43:32,603 [INFO] Running config postbuild_0_flight_tracker_app
+2024-09-13 04:43:33,175 [INFO] Command 01_pip_upgrade succeeded
+2024-09-13 04:43:33,653 [ERROR] Command 02_pip_install (/var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt -v) failed
+2024-09-13 04:43:33,653 [ERROR] Error encountered during build of postbuild_0_flight_tracker_app: Command 02_pip_install failed
+Traceback (most recent call last):
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 579, in run_config
+    CloudFormationCarpenter(config, self._auth_config, self.strict_mode).build(worklog)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 278, in build
+    self._config.commands)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/command_tool.py", line 127, in apply
+    raise ToolError(u"Command %s failed" % name)
+cfnbootstrap.construction_errors.ToolError: Command 02_pip_install failed
+2024-09-13 04:43:33,654 [ERROR] -----------------------BUILD FAILED!------------------------
+2024-09-13 04:43:33,654 [ERROR] Unhandled exception during build: Command 02_pip_install failed
+Traceback (most recent call last):
+  File "/opt/aws/bin/cfn-init", line 181, in <module>
+    worklog.build(metadata, configSets, strict_mode)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 137, in build
+    Contractor(metadata, strict_mode).build(configSets, self)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 567, in build
+    self.run_config(config, worklog)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 579, in run_config
+    CloudFormationCarpenter(config, self._auth_config, self.strict_mode).build(worklog)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/construction.py", line 278, in build
+    self._config.commands)
+  File "/usr/lib/python3.7/site-packages/cfnbootstrap/command_tool.py", line 127, in apply
+    raise ToolError(u"Command %s failed" % name)
+cfnbootstrap.construction_errors.ToolError: Command 02_pip_install failed
+2024-09-13 06:14:02,601 [INFO] -----------------------Starting build-----------------------
+2024-09-13 06:14:02,607 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 06:14:02,610 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 06:14:02,610 [INFO] ConfigSets completed
+2024-09-13 06:14:02,611 [INFO] -----------------------Build complete-----------------------
+2024-09-13 06:17:11,589 [INFO] -----------------------Starting build-----------------------
+2024-09-13 06:17:11,595 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 06:17:11,597 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 06:17:11,597 [INFO] ConfigSets completed
+2024-09-13 06:17:11,597 [INFO] -----------------------Build complete-----------------------
+2024-09-13 06:29:37,279 [INFO] -----------------------Starting build-----------------------
+2024-09-13 06:29:37,296 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 06:29:37,303 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 06:29:37,304 [INFO] ConfigSets completed
+2024-09-13 06:29:37,306 [INFO] -----------------------Build complete-----------------------
+2024-09-13 06:30:13,926 [INFO] -----------------------Starting build-----------------------
+2024-09-13 06:30:13,933 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 06:30:13,936 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 06:30:13,936 [INFO] ConfigSets completed
+2024-09-13 06:30:13,936 [INFO] -----------------------Build complete-----------------------
+2024-09-13 06:31:46,889 [INFO] -----------------------Starting build-----------------------
+2024-09-13 06:31:46,896 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 06:31:46,899 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 06:31:46,899 [INFO] ConfigSets completed
+2024-09-13 06:31:46,899 [INFO] -----------------------Build complete-----------------------
+2024-09-13 07:17:17,165 [INFO] -----------------------Starting build-----------------------
+2024-09-13 07:17:17,171 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 07:17:17,174 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 07:17:17,174 [INFO] ConfigSets completed
+2024-09-13 07:17:17,174 [INFO] -----------------------Build complete-----------------------
+2024-09-13 07:22:54,329 [INFO] -----------------------Starting build-----------------------
+2024-09-13 07:22:54,336 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 07:22:54,339 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 07:22:54,340 [INFO] ConfigSets completed
+2024-09-13 07:22:54,340 [INFO] -----------------------Build complete-----------------------
+2024-09-13 07:34:17,147 [INFO] -----------------------Starting build-----------------------
+2024-09-13 07:34:17,153 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 07:34:17,155 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 07:34:17,156 [INFO] ConfigSets completed
+2024-09-13 07:34:17,156 [INFO] -----------------------Build complete-----------------------
+2024-09-13 07:43:30,843 [INFO] -----------------------Starting build-----------------------
+2024-09-13 07:43:30,851 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2024-09-13 07:43:30,853 [INFO] Running configSet Infra-EmbeddedPreBuild
+2024-09-13 07:43:30,854 [INFO] ConfigSets completed
+2024-09-13 07:43:30,854 [INFO] -----------------------Build complete-----------------------

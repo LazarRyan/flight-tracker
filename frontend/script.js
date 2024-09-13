@@ -2,7 +2,7 @@
 let chart = null;
 
 // Elastic Beanstalk backend URL
-const API_URL = 'http://localhost:8080';
+const API_URL = 'http://flight-tracker-env-v2.eba-njpj8vcp.us-east-2.elasticbeanstalk.com/';
 
 // Function to fetch prediction from the backend
 function fetchPrediction(data) {

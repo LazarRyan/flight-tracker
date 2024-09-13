@@ -1,0 +1,226 @@
+Sep 12 23:01:32 ip-172-31-26-205 crond[2322]: (CRON) INFO (RANDOM_DELAY will be scaled with factor 2% if used.)
+Sep 12 23:01:32 ip-172-31-26-205 crond[2322]: (CRON) INFO (running with inotify support)
+Sep 12 23:10:01 ip-172-31-26-205 CROND[2681]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 12 23:10:01 ip-172-31-26-205 CROND[2682]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 12 23:20:01 ip-172-31-26-205 CROND[2761]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 12 23:30:01 ip-172-31-26-205 CROND[2880]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 12 23:30:01 ip-172-31-26-205 CROND[2881]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 12 23:40:01 ip-172-31-26-205 CROND[2982]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 12 23:50:01 ip-172-31-26-205 CROND[3121]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 12 23:50:01 ip-172-31-26-205 CROND[3122]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 12 23:53:01 ip-172-31-26-205 CROND[3205]: (root) CMD (/usr/lib64/sa/sa2 -A)
+Sep 13 00:00:01 ip-172-31-26-205 CROND[3260]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 00:01:01 ip-172-31-26-205 CROND[3275]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3275]: starting 0anacron
+Sep 13 00:01:01 ip-172-31-26-205 anacron[3285]: Anacron started on 2024-09-13
+Sep 13 00:01:01 ip-172-31-26-205 anacron[3285]: Will run job `cron.daily' in 14 min.
+Sep 13 00:01:01 ip-172-31-26-205 anacron[3285]: Will run job `cron.weekly' in 34 min.
+Sep 13 00:01:01 ip-172-31-26-205 anacron[3285]: Will run job `cron.monthly' in 54 min.
+Sep 13 00:01:01 ip-172-31-26-205 anacron[3285]: Jobs will be executed sequentially
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3287]: finished 0anacron
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3275]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3294]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3275]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3301]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3275]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3308]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3275]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 00:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3315]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 00:10:01 ip-172-31-26-205 CROND[3375]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 00:10:01 ip-172-31-26-205 CROND[3374]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 00:15:01 ip-172-31-26-205 anacron[3285]: Job `cron.daily' started
+Sep 13 00:15:01 ip-172-31-26-205 run-parts(/etc/cron.daily)[3418]: starting logrotate
+Sep 13 00:15:01 ip-172-31-26-205 run-parts(/etc/cron.daily)[3426]: finished logrotate
+Sep 13 00:15:01 ip-172-31-26-205 run-parts(/etc/cron.daily)[3418]: starting man-db.cron
+Sep 13 00:15:20 ip-172-31-26-205 run-parts(/etc/cron.daily)[29629]: finished man-db.cron
+Sep 13 00:15:20 ip-172-31-26-205 run-parts(/etc/cron.daily)[3418]: starting mlocate
+Sep 13 00:15:21 ip-172-31-26-205 run-parts(/etc/cron.daily)[29640]: finished mlocate
+Sep 13 00:15:21 ip-172-31-26-205 anacron[3285]: Job `cron.daily' terminated
+Sep 13 00:20:01 ip-172-31-26-205 CROND[29722]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 00:30:01 ip-172-31-26-205 CROND[29791]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 00:30:01 ip-172-31-26-205 CROND[29792]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 00:35:01 ip-172-31-26-205 anacron[3285]: Job `cron.weekly' started
+Sep 13 00:35:01 ip-172-31-26-205 anacron[3285]: Job `cron.weekly' terminated
+Sep 13 00:40:01 ip-172-31-26-205 CROND[29870]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 00:42:01 ip-172-31-26-205 CROND[29890]: (root) CMD (/usr/bin/systemctl --quiet restart update-motd)
+Sep 13 00:50:01 ip-172-31-26-205 CROND[30007]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 00:50:01 ip-172-31-26-205 CROND[30008]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 00:55:01 ip-172-31-26-205 anacron[3285]: Job `cron.monthly' started
+Sep 13 00:55:01 ip-172-31-26-205 anacron[3285]: Job `cron.monthly' terminated
+Sep 13 00:55:01 ip-172-31-26-205 anacron[3285]: Normal exit (3 jobs run)
+Sep 13 01:00:01 ip-172-31-26-205 CROND[30086]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 01:01:01 ip-172-31-26-205 CROND[30100]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 13 01:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30100]: starting 0anacron
+Sep 13 01:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30109]: finished 0anacron
+Sep 13 01:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30100]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 01:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30116]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 01:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30100]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 01:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30123]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 01:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30100]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 01:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30130]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 01:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30100]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 01:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30137]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 01:10:01 ip-172-31-26-205 CROND[30251]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 01:10:01 ip-172-31-26-205 CROND[30252]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 01:20:01 ip-172-31-26-205 CROND[30327]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 01:30:01 ip-172-31-26-205 CROND[30398]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 01:30:01 ip-172-31-26-205 CROND[30399]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 01:40:01 ip-172-31-26-205 CROND[30527]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 01:50:01 ip-172-31-26-205 CROND[30599]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 01:50:01 ip-172-31-26-205 CROND[30598]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 02:00:01 ip-172-31-26-205 CROND[30675]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 02:01:01 ip-172-31-26-205 CROND[30740]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30740]: starting 0anacron
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30749]: finished 0anacron
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30740]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30756]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30740]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30763]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30740]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30770]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30740]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 02:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[30777]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 02:10:01 ip-172-31-26-205 CROND[30840]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 02:10:01 ip-172-31-26-205 CROND[30841]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 02:20:01 ip-172-31-26-205 CROND[30916]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 02:30:01 ip-172-31-26-205 CROND[31038]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 02:30:01 ip-172-31-26-205 CROND[31039]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 02:40:01 ip-172-31-26-205 CROND[31117]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 02:50:01 ip-172-31-26-205 CROND[31189]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 02:50:01 ip-172-31-26-205 CROND[31188]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 03:00:01 ip-172-31-26-205 CROND[31375]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 03:01:01 ip-172-31-26-205 CROND[31391]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31391]: starting 0anacron
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31400]: finished 0anacron
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31391]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31407]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31391]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31414]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31391]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31421]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31391]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 03:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31428]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 03:10:02 ip-172-31-26-205 CROND[31491]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 03:10:02 ip-172-31-26-205 CROND[31492]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 03:20:01 ip-172-31-26-205 CROND[31616]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 03:30:01 ip-172-31-26-205 CROND[31687]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 03:30:01 ip-172-31-26-205 CROND[31688]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 03:40:01 ip-172-31-26-205 CROND[31765]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 03:50:01 ip-172-31-26-205 CROND[31885]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 03:50:01 ip-172-31-26-205 CROND[31886]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 04:00:01 ip-172-31-26-205 CROND[31962]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 04:01:01 ip-172-31-26-205 CROND[31977]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31977]: starting 0anacron
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31986]: finished 0anacron
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31977]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31993]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31977]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[32000]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31977]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[32007]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[31977]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 04:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[32014]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 04:10:01 ip-172-31-26-205 CROND[32077]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 04:10:01 ip-172-31-26-205 CROND[32078]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 04:20:01 ip-172-31-26-205 CROND[32277]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 04:30:01 ip-172-31-26-205 CROND[32558]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 04:30:01 ip-172-31-26-205 CROND[32559]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 04:40:01 ip-172-31-26-205 CROND[32637]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 04:50:01 ip-172-31-26-205 CROND[584]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 04:50:01 ip-172-31-26-205 CROND[585]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 05:00:01 ip-172-31-26-205 CROND[722]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 05:01:01 ip-172-31-26-205 CROND[741]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 13 05:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[741]: starting 0anacron
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[750]: finished 0anacron
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[741]: starting cron.logcleanup.elasticbeanstalk.healthd-proxy.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[761]: finished cron.logcleanup.elasticbeanstalk.healthd-proxy.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[741]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[768]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[741]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[775]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[741]: starting cron.logrotate.elasticbeanstalk.healthd.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[782]: finished cron.logrotate.elasticbeanstalk.healthd.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[741]: starting cron.logrotate.elasticbeanstalk.nginx.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[789]: finished cron.logrotate.elasticbeanstalk.nginx.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[741]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[796]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[741]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 05:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[803]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 05:10:01 ip-172-31-26-205 CROND[918]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 05:10:01 ip-172-31-26-205 CROND[919]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 05:20:01 ip-172-31-26-205 CROND[996]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 05:30:01 ip-172-31-26-205 CROND[1068]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 05:30:01 ip-172-31-26-205 CROND[1069]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 05:40:01 ip-172-31-26-205 CROND[1206]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 05:50:01 ip-172-31-26-205 CROND[1283]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 05:50:01 ip-172-31-26-205 CROND[1284]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 06:00:01 ip-172-31-26-205 CROND[1363]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 06:01:01 ip-172-31-26-205 CROND[1378]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1378]: starting 0anacron
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1387]: finished 0anacron
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1378]: starting cron.logcleanup.elasticbeanstalk.healthd-proxy.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1398]: finished cron.logcleanup.elasticbeanstalk.healthd-proxy.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1378]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1405]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1378]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1412]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1378]: starting cron.logrotate.elasticbeanstalk.healthd.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1419]: finished cron.logrotate.elasticbeanstalk.healthd.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1378]: starting cron.logrotate.elasticbeanstalk.nginx.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1426]: finished cron.logrotate.elasticbeanstalk.nginx.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1378]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1433]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1378]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 06:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[1440]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 06:10:01 ip-172-31-26-205 CROND[1554]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 06:10:01 ip-172-31-26-205 CROND[1555]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 06:20:01 ip-172-31-26-205 CROND[1687]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 06:30:01 ip-172-31-26-205 CROND[1856]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 06:30:01 ip-172-31-26-205 CROND[1857]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 06:40:01 ip-172-31-26-205 CROND[1987]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 06:50:01 ip-172-31-26-205 CROND[2111]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 06:50:01 ip-172-31-26-205 CROND[2112]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 07:00:01 ip-172-31-26-205 CROND[2189]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 07:01:01 ip-172-31-26-205 CROND[2203]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2203]: starting 0anacron
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2212]: finished 0anacron
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2203]: starting cron.logcleanup.elasticbeanstalk.healthd-proxy.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2223]: finished cron.logcleanup.elasticbeanstalk.healthd-proxy.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2203]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2231]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2203]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2239]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2203]: starting cron.logrotate.elasticbeanstalk.healthd.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2246]: finished cron.logrotate.elasticbeanstalk.healthd.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2203]: starting cron.logrotate.elasticbeanstalk.nginx.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2253]: finished cron.logrotate.elasticbeanstalk.nginx.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2203]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2260]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2203]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 07:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[2267]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 07:10:01 ip-172-31-26-205 CROND[2342]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 07:10:01 ip-172-31-26-205 CROND[2345]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 07:20:01 ip-172-31-26-205 CROND[2507]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 07:30:01 ip-172-31-26-205 CROND[2609]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 07:30:01 ip-172-31-26-205 CROND[2610]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 07:40:01 ip-172-31-26-205 CROND[2783]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 07:50:01 ip-172-31-26-205 CROND[2905]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 07:50:01 ip-172-31-26-205 CROND[2906]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 13 08:00:01 ip-172-31-26-205 CROND[2984]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 13 08:01:01 ip-172-31-26-205 CROND[3000]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3000]: starting 0anacron
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3009]: finished 0anacron
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3000]: starting cron.logcleanup.elasticbeanstalk.healthd-proxy.conf
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3020]: finished cron.logcleanup.elasticbeanstalk.healthd-proxy.conf
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3000]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3027]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3000]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3034]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3000]: starting cron.logrotate.elasticbeanstalk.healthd.conf
+Sep 13 08:01:01 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3041]: finished cron.logrotate.elasticbeanstalk.healthd.conf
+Sep 13 08:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3000]: starting cron.logrotate.elasticbeanstalk.nginx.conf
+Sep 13 08:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3048]: finished cron.logrotate.elasticbeanstalk.nginx.conf
+Sep 13 08:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3000]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 08:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3055]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 13 08:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3000]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 13 08:01:02 ip-172-31-26-205 run-parts(/etc/cron.hourly)[3062]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf

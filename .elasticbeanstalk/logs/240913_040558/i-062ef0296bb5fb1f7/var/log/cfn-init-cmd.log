@@ -1,0 +1,222 @@
+2024-09-12 23:01:34,755 P2416 [INFO] ************************************************************
+2024-09-12 23:01:34,755 P2416 [INFO] ConfigSet _OnInstanceBoot
+2024-09-12 23:01:34,765 P2416 [INFO] ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2024-09-12 23:01:34,765 P2416 [INFO] Config AWSEBBaseConfig
+2024-09-12 23:01:35,097 P2416 [INFO] ============================================================
+2024-09-12 23:01:35,099 P2416 [INFO] Command clearbackupfiles
+2024-09-12 23:01:35,112 P2416 [INFO] Completed successfully.
+2024-09-12 23:01:35,124 P2416 [INFO] ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2024-09-12 23:01:35,124 P2416 [INFO] Config AWSEBCfnHupEndpointOverride
+2024-09-12 23:01:35,125 P2416 [INFO] ============================================================
+2024-09-12 23:01:35,125 P2416 [INFO] Command clearbackupfiles
+2024-09-12 23:01:35,134 P2416 [INFO] Completed successfully.
+2024-09-12 23:03:48,401 P2595 [INFO] ************************************************************
+2024-09-12 23:03:48,401 P2595 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-12 23:05:28,306 P2638 [INFO] ************************************************************
+2024-09-12 23:05:28,306 P2638 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 02:50:44,260 P31225 [INFO] ************************************************************
+2024-09-13 02:50:44,260 P31225 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 02:58:57,126 P31355 [INFO] ************************************************************
+2024-09-13 02:58:57,126 P31355 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 04:10:17,871 P32113 [INFO] ************************************************************
+2024-09-13 04:10:17,871 P32113 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 04:13:41,821 P32224 [INFO] ************************************************************
+2024-09-13 04:13:41,821 P32224 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 04:26:57,454 P32350 [INFO] ************************************************************
+2024-09-13 04:26:57,454 P32350 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 04:26:57,457 P32350 [INFO] ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2024-09-13 04:26:57,457 P32350 [INFO] Config prebuild_0_flight_tracker_app
+2024-09-13 04:26:57,461 P32350 [INFO] ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2024-09-13 04:26:57,461 P32350 [INFO] Config prebuild_1_flight_tracker_app
+2024-09-13 04:26:57,461 P32350 [INFO] ============================================================
+2024-09-13 04:26:57,461 P32350 [INFO] yum makecache
+2024-09-13 04:27:04,914 P32350 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:27:04,915 P32350 [INFO] 	Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+2024-09-13 04:27:04,915 P32350 [INFO] 	Metadata Cache Created
+2024-09-13 04:27:04,915 P32350 [INFO] ------------------------------------------------------------
+2024-09-13 04:27:04,915 P32350 [INFO] Completed successfully.
+2024-09-13 04:27:04,916 P32350 [INFO] ============================================================
+2024-09-13 04:27:04,916 P32350 [INFO] yum list installed python3-devel
+2024-09-13 04:27:05,877 P32350 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:27:05,878 P32350 [INFO] 	Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+2024-09-13 04:27:05,878 P32350 [INFO] 	Error: No matching Packages to list
+2024-09-13 04:27:05,878 P32350 [INFO] ------------------------------------------------------------
+2024-09-13 04:27:05,878 P32350 [ERROR] Exited with error code 1
+2024-09-13 04:27:05,878 P32350 [INFO] ============================================================
+2024-09-13 04:27:05,878 P32350 [INFO] yum list available python3-devel
+2024-09-13 04:27:07,275 P32350 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:27:07,276 P32350 [INFO] 	Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+2024-09-13 04:27:07,276 P32350 [INFO] 	Available Packages
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.0-0.12.b2.amzn2.0.2              amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.0-0.16.b3.amzn2.0.1              amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.0-0.20.rc1.amzn2.0.1             amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.0-0.20.rc1.amzn2.0.2             amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.1-9.amzn2.0.1                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.2-4.amzn2.0.1                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.3-1.amzn2.0.1                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.3-1.amzn2.0.2                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.4-1.amzn2.0.1                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.4-1.amzn2.0.2                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.4-1.amzn2.0.3                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.4-1.amzn2.0.4                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.6-1.amzn2.0.1                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.8-1.amzn2.0.1                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.9-1.amzn2.0.1                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.9-1.amzn2.0.2                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.9-1.amzn2.0.3                    amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.10-1.amzn2.0.1                   amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.15-1.amzn2.0.1                   amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.15-1.amzn2.0.2                   amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.16-1.amzn2.0.1                   amzn2-core
+2024-09-13 04:27:07,276 P32350 [INFO] 	python3-devel.x86_64             3.7.16-1.amzn2.0.2                   amzn2-core
+2024-09-13 04:27:07,277 P32350 [INFO] 	python3-devel.x86_64             3.7.16-1.amzn2.0.4                   amzn2-core
+2024-09-13 04:27:07,277 P32350 [INFO] 	python3-devel.x86_64             3.7.16-1.amzn2.0.5                   amzn2-core
+2024-09-13 04:27:07,277 P32350 [INFO] 	python3-devel.x86_64             3.7.16-1.amzn2.0.6                   amzn2-core
+2024-09-13 04:27:07,277 P32350 [INFO] ------------------------------------------------------------
+2024-09-13 04:27:07,277 P32350 [INFO] Completed successfully.
+2024-09-13 04:27:07,277 P32350 [INFO] ============================================================
+2024-09-13 04:27:07,277 P32350 [INFO] yum list installed gcc
+2024-09-13 04:27:07,959 P32350 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:27:07,959 P32350 [INFO] 	Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+2024-09-13 04:27:07,959 P32350 [INFO] 	Installed Packages
+2024-09-13 04:27:07,959 P32350 [INFO] 	gcc.x86_64                      7.3.1-17.amzn2                       @amzn2-core
+2024-09-13 04:27:07,959 P32350 [INFO] ------------------------------------------------------------
+2024-09-13 04:27:07,959 P32350 [INFO] Completed successfully.
+2024-09-13 04:27:07,959 P32350 [INFO] ============================================================
+2024-09-13 04:27:07,960 P32350 [INFO] yum install python3-devel
+2024-09-13 04:27:10,400 P32350 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:27:10,400 P32350 [INFO] 	Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+2024-09-13 04:27:10,400 P32350 [INFO] 	Resolving Dependencies
+2024-09-13 04:27:10,400 P32350 [INFO] 	--> Running transaction check
+2024-09-13 04:27:10,401 P32350 [INFO] 	---> Package python3-devel.x86_64 0:3.7.16-1.amzn2.0.6 will be installed
+2024-09-13 04:27:10,401 P32350 [INFO] 	--> Processing Dependency: python3-rpm-macros for package: python3-devel-3.7.16-1.amzn2.0.6.x86_64
+2024-09-13 04:27:10,401 P32350 [INFO] 	--> Running transaction check
+2024-09-13 04:27:10,401 P32350 [INFO] 	---> Package python3-rpm-macros.noarch 0:3-60.amzn2.0.1 will be installed
+2024-09-13 04:27:10,401 P32350 [INFO] 	--> Finished Dependency Resolution
+2024-09-13 04:27:10,401 P32350 [INFO] 	
+2024-09-13 04:27:10,401 P32350 [INFO] 	Dependencies Resolved
+2024-09-13 04:27:10,401 P32350 [INFO] 	
+2024-09-13 04:27:10,401 P32350 [INFO] 	================================================================================
+2024-09-13 04:27:10,401 P32350 [INFO] 	 Package                Arch       Version                 Repository      Size
+2024-09-13 04:27:10,402 P32350 [INFO] 	================================================================================
+2024-09-13 04:27:10,403 P32350 [INFO] 	Installing:
+2024-09-13 04:27:10,403 P32350 [INFO] 	 python3-devel          x86_64     3.7.16-1.amzn2.0.6      amzn2-core     245 k
+2024-09-13 04:27:10,403 P32350 [INFO] 	Installing for dependencies:
+2024-09-13 04:27:10,403 P32350 [INFO] 	 python3-rpm-macros     noarch     3-60.amzn2.0.1          amzn2-core      12 k
+2024-09-13 04:27:10,403 P32350 [INFO] 	
+2024-09-13 04:27:10,403 P32350 [INFO] 	Transaction Summary
+2024-09-13 04:27:10,403 P32350 [INFO] 	================================================================================
+2024-09-13 04:27:10,403 P32350 [INFO] 	Install  1 Package (+1 Dependent package)
+2024-09-13 04:27:10,403 P32350 [INFO] 	
+2024-09-13 04:27:10,403 P32350 [INFO] 	Total download size: 257 k
+2024-09-13 04:27:10,403 P32350 [INFO] 	Installed size: 721 k
+2024-09-13 04:27:10,403 P32350 [INFO] 	Downloading packages:
+2024-09-13 04:27:10,403 P32350 [INFO] 	--------------------------------------------------------------------------------
+2024-09-13 04:27:10,403 P32350 [INFO] 	Total                                              2.0 MB/s | 257 kB  00:00     
+2024-09-13 04:27:10,403 P32350 [INFO] 	Running transaction check
+2024-09-13 04:27:10,403 P32350 [INFO] 	Running transaction test
+2024-09-13 04:27:10,403 P32350 [INFO] 	Transaction test succeeded
+2024-09-13 04:27:10,403 P32350 [INFO] 	Running transaction
+2024-09-13 04:27:10,403 P32350 [INFO] 	  Installing : python3-rpm-macros-3-60.amzn2.0.1.noarch                     1/2 
+2024-09-13 04:27:10,403 P32350 [INFO] 	  Installing : python3-devel-3.7.16-1.amzn2.0.6.x86_64                      2/2 
+2024-09-13 04:27:10,404 P32350 [INFO] 	  Verifying  : python3-rpm-macros-3-60.amzn2.0.1.noarch                     1/2 
+2024-09-13 04:27:10,404 P32350 [INFO] 	  Verifying  : python3-devel-3.7.16-1.amzn2.0.6.x86_64                      2/2 
+2024-09-13 04:27:10,404 P32350 [INFO] 	
+2024-09-13 04:27:10,404 P32350 [INFO] 	Installed:
+2024-09-13 04:27:10,404 P32350 [INFO] 	  python3-devel.x86_64 0:3.7.16-1.amzn2.0.6                                     
+2024-09-13 04:27:10,404 P32350 [INFO] 	
+2024-09-13 04:27:10,404 P32350 [INFO] 	Dependency Installed:
+2024-09-13 04:27:10,404 P32350 [INFO] 	  python3-rpm-macros.noarch 0:3-60.amzn2.0.1                                    
+2024-09-13 04:27:10,404 P32350 [INFO] 	
+2024-09-13 04:27:10,404 P32350 [INFO] 	Complete!
+2024-09-13 04:27:10,405 P32350 [INFO] ------------------------------------------------------------
+2024-09-13 04:27:10,405 P32350 [INFO] Completed successfully.
+2024-09-13 04:27:13,142 P32489 [INFO] ************************************************************
+2024-09-13 04:27:13,142 P32489 [INFO] ConfigSet Infra-EmbeddedPostBuild
+2024-09-13 04:27:13,145 P32489 [INFO] ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2024-09-13 04:27:13,145 P32489 [INFO] Config postbuild_0_flight_tracker_app
+2024-09-13 04:27:13,160 P32489 [INFO] ============================================================
+2024-09-13 04:27:13,160 P32489 [INFO] Command 01_pip_upgrade
+2024-09-13 04:27:16,189 P32489 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:27:16,189 P32489 [INFO] 	Requirement already satisfied: pip in /var/app/venv/staging-LQM1lest/lib/python3.8/site-packages (22.0.4)
+2024-09-13 04:27:16,189 P32489 [INFO] 	Collecting pip
+2024-09-13 04:27:16,189 P32489 [INFO] 	  Downloading pip-24.2-py3-none-any.whl (1.8 MB)
+2024-09-13 04:27:16,189 P32489 [INFO] 	     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 19.2 MB/s eta 0:00:00
+2024-09-13 04:27:16,189 P32489 [INFO] 	Installing collected packages: pip
+2024-09-13 04:27:16,189 P32489 [INFO] 	  Attempting uninstall: pip
+2024-09-13 04:27:16,189 P32489 [INFO] 	    Found existing installation: pip 22.0.4
+2024-09-13 04:27:16,189 P32489 [INFO] 	    Uninstalling pip-22.0.4:
+2024-09-13 04:27:16,189 P32489 [INFO] 	      Successfully uninstalled pip-22.0.4
+2024-09-13 04:27:16,189 P32489 [INFO] 	Successfully installed pip-24.2
+2024-09-13 04:27:16,189 P32489 [INFO] ------------------------------------------------------------
+2024-09-13 04:27:16,189 P32489 [INFO] Completed successfully.
+2024-09-13 04:27:16,198 P32489 [INFO] ============================================================
+2024-09-13 04:27:16,198 P32489 [INFO] Command 02_pip_install
+2024-09-13 04:27:16,669 P32489 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:27:16,669 P32489 [INFO] 	ERROR: Could not open requirements file: [Errno 2] No such file or directory: 'requirements.txt'
+2024-09-13 04:27:16,669 P32489 [INFO] ------------------------------------------------------------
+2024-09-13 04:27:16,669 P32489 [ERROR] Exited with error code 1
+2024-09-13 04:43:27,466 P32735 [INFO] ************************************************************
+2024-09-13 04:43:27,466 P32735 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 04:43:27,478 P32735 [INFO] ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2024-09-13 04:43:27,478 P32735 [INFO] Config prebuild_0_flight_tracker_app
+2024-09-13 04:43:27,490 P32735 [INFO] ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2024-09-13 04:43:27,490 P32735 [INFO] Config prebuild_1_flight_tracker_app
+2024-09-13 04:43:27,490 P32735 [INFO] ============================================================
+2024-09-13 04:43:27,491 P32735 [INFO] yum makecache
+2024-09-13 04:43:28,512 P32735 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:43:28,512 P32735 [INFO] 	Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+2024-09-13 04:43:28,512 P32735 [INFO] 	Metadata Cache Created
+2024-09-13 04:43:28,512 P32735 [INFO] ------------------------------------------------------------
+2024-09-13 04:43:28,512 P32735 [INFO] Completed successfully.
+2024-09-13 04:43:28,512 P32735 [INFO] ============================================================
+2024-09-13 04:43:28,512 P32735 [INFO] yum list installed python3-devel
+2024-09-13 04:43:29,193 P32735 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:43:29,194 P32735 [INFO] 	Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+2024-09-13 04:43:29,194 P32735 [INFO] 	Installed Packages
+2024-09-13 04:43:29,194 P32735 [INFO] 	python3-devel.x86_64               3.7.16-1.amzn2.0.6                @amzn2-core
+2024-09-13 04:43:29,194 P32735 [INFO] ------------------------------------------------------------
+2024-09-13 04:43:29,194 P32735 [INFO] Completed successfully.
+2024-09-13 04:43:29,194 P32735 [INFO] ============================================================
+2024-09-13 04:43:29,194 P32735 [INFO] yum list installed gcc
+2024-09-13 04:43:29,940 P32735 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:43:29,940 P32735 [INFO] 	Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+2024-09-13 04:43:29,941 P32735 [INFO] 	Installed Packages
+2024-09-13 04:43:29,942 P32735 [INFO] 	gcc.x86_64                      7.3.1-17.amzn2                       @amzn2-core
+2024-09-13 04:43:29,943 P32735 [INFO] ------------------------------------------------------------
+2024-09-13 04:43:29,943 P32735 [INFO] Completed successfully.
+2024-09-13 04:43:32,601 P434 [INFO] ************************************************************
+2024-09-13 04:43:32,601 P434 [INFO] ConfigSet Infra-EmbeddedPostBuild
+2024-09-13 04:43:32,604 P434 [INFO] ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2024-09-13 04:43:32,604 P434 [INFO] Config postbuild_0_flight_tracker_app
+2024-09-13 04:43:32,611 P434 [INFO] ============================================================
+2024-09-13 04:43:32,611 P434 [INFO] Command 01_pip_upgrade
+2024-09-13 04:43:33,174 P434 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:43:33,175 P434 [INFO] 	Requirement already satisfied: pip in /var/app/venv/staging-LQM1lest/lib/python3.8/site-packages (24.2)
+2024-09-13 04:43:33,175 P434 [INFO] ------------------------------------------------------------
+2024-09-13 04:43:33,175 P434 [INFO] Completed successfully.
+2024-09-13 04:43:33,183 P434 [INFO] ============================================================
+2024-09-13 04:43:33,183 P434 [INFO] Command 02_pip_install
+2024-09-13 04:43:33,652 P434 [INFO] -----------------------Command Output-----------------------
+2024-09-13 04:43:33,653 P434 [INFO] 	Using pip 24.2 from /var/app/venv/staging-LQM1lest/lib64/python3.8/site-packages/pip (python 3.8)
+2024-09-13 04:43:33,653 P434 [INFO] 	ERROR: Could not open requirements file: [Errno 2] No such file or directory: 'requirements.txt'
+2024-09-13 04:43:33,653 P434 [INFO] ------------------------------------------------------------
+2024-09-13 04:43:33,653 P434 [ERROR] Exited with error code 1
+2024-09-13 06:14:02,610 P1612 [INFO] ************************************************************
+2024-09-13 06:14:02,610 P1612 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 06:17:11,597 P1662 [INFO] ************************************************************
+2024-09-13 06:17:11,597 P1662 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 06:29:37,304 P1843 [INFO] ************************************************************
+2024-09-13 06:29:37,304 P1843 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 06:30:13,936 P1890 [INFO] ************************************************************
+2024-09-13 06:30:13,936 P1890 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 06:31:46,899 P1927 [INFO] ************************************************************
+2024-09-13 06:31:46,899 P1927 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 07:17:17,174 P2476 [INFO] ************************************************************
+2024-09-13 07:17:17,174 P2476 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 07:22:54,339 P2555 [INFO] ************************************************************
+2024-09-13 07:22:54,340 P2555 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 07:34:17,156 P2670 [INFO] ************************************************************
+2024-09-13 07:34:17,156 P2670 [INFO] ConfigSet Infra-EmbeddedPreBuild
+2024-09-13 07:43:30,854 P2855 [INFO] ************************************************************
+2024-09-13 07:43:30,854 P2855 [INFO] ConfigSet Infra-EmbeddedPreBuild

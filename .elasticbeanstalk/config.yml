@@ -1,7 +1,9 @@
 branch-defaults:
   main:
-    environment: flight-tracker-env
+    environment: flight-tracker-env-v2
     group_suffix: null
+deploy:
+  artifact: backend/Dockerfile
 environment-defaults:
   flight-tracker-env:
     branch: null
@@ -10,7 +12,7 @@ global:
   application_name: flight-tracker-app
   branch: null
   default_ec2_keyname: flight-tracker-dev
-  default_platform: Docker
+  default_platform: Docker running on 64bit Amazon Linux 2
   default_region: us-east-2
   include_git_submodules: true
   instance_profile: null
@@ -20,5 +22,10 @@ global:
   repository: null
   sc: git
   workspace_type: Application
-deploy:
-  artifact: backend/Dockerfile
+option_settings:
+  aws:elasticbeanstalk:application:environment:
+    PYTHONPATH: /var/app/current:$PYTHONPATH
+  aws:elasticbeanstalk:container:python:
+    WSGIPath: application:application
+  aws:elasticbeanstalk:environment:proxy:staticfiles:
+    /static: static
