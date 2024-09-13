@@ -6,6 +6,7 @@ amadeus==5.1.0
 annotated-types==0.7.0
 anyio==4.4.0
 async-timeout==4.0.3
+asyncio==3.4.3
 attrs==24.2.0
 awsebcli==3.20.10
 blessed==1.20.0
@@ -21,6 +22,7 @@ colorama==0.4.3
 contourpy==1.2.1
 cycler==0.12.1
 distro==1.9.0
+disutils==1.4.32.post2
 docker==7.1.0
 exceptiongroup==1.2.2
 Flask==2.1.2
