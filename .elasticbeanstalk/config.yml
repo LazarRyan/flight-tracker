@@ -1,0 +1,24 @@
+branch-defaults:
+  main:
+    environment: flight-tracker-env
+    group_suffix: null
+environment-defaults:
+  flight-tracker-env:
+    branch: null
+    repository: null
+global:
+  application_name: flight-tracker-app
+  branch: null
+  default_ec2_keyname: flight-tracker-dev
+  default_platform: Docker
+  default_region: us-east-2
+  include_git_submodules: true
+  instance_profile: null
+  platform_name: null
+  platform_version: null
+  profile: eb-cli
+  repository: null
+  sc: git
+  workspace_type: Application
+deploy:
+  artifact: backend/Dockerfile

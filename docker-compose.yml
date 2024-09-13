@@ -1,21 +1,19 @@
 services:
   frontend:
     build:
-      context: ./flight-search-service/frontend
+      context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "80:80"
-    depends_on:
-      - backend
+      - "3000:80"  # Assuming frontend runs on port 80 inside the container
     networks:
       - app-network
 
   backend:
     build:
-      context: ./flight-search-service/backend
+      context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "5001:5001"
+      - "8080:8080"  # Assuming backend runs on port 8080
     environment:
       - FLASK_ENV=production
       - AMADEUS_CLIENT_ID=${AMADEUS_CLIENT_ID}

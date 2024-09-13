@@ -1,0 +1,25 @@
+Sep 12 21:55:13 ip-172-31-40-121 crond[2311]: (CRON) INFO (RANDOM_DELAY will be scaled with factor 67% if used.)
+Sep 12 21:55:13 ip-172-31-40-121 crond[2311]: (CRON) INFO (running with inotify support)
+Sep 12 22:00:01 ip-172-31-40-121 CROND[2667]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 12 22:01:01 ip-172-31-40-121 CROND[2680]: (root) CMD (run-parts /etc/cron.hourly)
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2680]: starting 0anacron
+Sep 12 22:01:01 ip-172-31-40-121 anacron[2690]: Anacron started on 2024-09-12
+Sep 12 22:01:01 ip-172-31-40-121 anacron[2690]: Will run job `cron.daily' in 48 min.
+Sep 12 22:01:01 ip-172-31-40-121 anacron[2690]: Will run job `cron.weekly' in 68 min.
+Sep 12 22:01:01 ip-172-31-40-121 anacron[2690]: Will run job `cron.monthly' in 88 min.
+Sep 12 22:01:01 ip-172-31-40-121 anacron[2690]: Jobs will be executed sequentially
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2692]: finished 0anacron
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2680]: starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2699]: finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2680]: starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2706]: finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2680]: starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2713]: finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2680]: starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 12 22:01:01 ip-172-31-40-121 run-parts(/etc/cron.hourly)[2720]: finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Sep 12 22:10:01 ip-172-31-40-121 CROND[2800]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 12 22:10:01 ip-172-31-40-121 CROND[2801]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 12 22:20:01 ip-172-31-40-121 CROND[2900]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 12 22:30:02 ip-172-31-40-121 CROND[3021]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Sep 12 22:30:02 ip-172-31-40-121 CROND[3022]: (root) CMD (/usr/lib64/sa/sa1 1 1)
+Sep 12 22:40:01 ip-172-31-40-121 CROND[3096]: (root) CMD (/usr/lib64/sa/sa1 1 1)

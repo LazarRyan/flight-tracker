@@ -1,0 +1,514 @@
+2024/09/12 21:55:17.678211 [INFO] Starting...
+2024/09/12 21:55:17.678332 [INFO] Starting EBPlatform-PlatformEngine
+2024/09/12 21:55:17.678451 [INFO] reading event message file
+2024/09/12 21:55:17.680559 [INFO] Engine received EB command userdata-exec
+
+2024/09/12 21:55:17.715850 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2
+2024/09/12 21:55:18.203753 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBBeanstalkMetadata --region us-east-2
+2024/09/12 21:55:18.750392 [INFO] This is a workflow controlled instance.
+2024/09/12 21:55:18.750522 [INFO] Engine command: (env-launch)
+
+2024/09/12 21:55:18.752876 [INFO] Executing instruction: SyncClock
+2024/09/12 21:55:18.752883 [INFO] Starting SyncClock
+2024/09/12 21:55:18.752893 [INFO] Running command: /usr/bin/chronyc tracking
+2024/09/12 21:55:18.762323 [INFO] Reference ID    : A9FEA97B (169.254.169.123)
+Stratum         : 4
+Ref time (UTC)  : Thu Sep 12 21:55:17 2024
+System time     : 0.061002277 seconds slow of NTP time
+Last offset     : +0.000014112 seconds
+RMS offset      : 0.000014112 seconds
+Frequency       : 0.569 ppm fast
+Residual freq   : -2.101 ppm
+Skew            : 0.320 ppm
+Root delay      : 0.000275910 seconds
+Root dispersion : 0.000378559 seconds
+Update interval : 2.0 seconds
+Leap status     : Normal
+
+2024/09/12 21:55:18.762349 [INFO] Running command: /usr/bin/chronyc -a makestep
+2024/09/12 21:55:18.826395 [INFO] 200 OK
+
+2024/09/12 21:55:18.826957 [INFO] Skipping Configure OS
+2024/09/12 21:55:18.826967 [INFO] Skipping LockRepo
+2024/09/12 21:55:18.826971 [INFO] Skipping GenerateEBBanner
+2024/09/12 21:55:18.826975 [INFO] Skipping Install Process Manager
+2024/09/12 21:55:18.826979 [INFO] Skipping install syslog
+2024/09/12 21:55:18.826982 [INFO] Skipping install cron
+2024/09/12 21:55:18.826986 [INFO] Skipping install proxy
+2024/09/12 21:55:18.826989 [INFO] Skipping installhealthd
+2024/09/12 21:55:18.826993 [INFO] Skipping Install Log Streaming Manager
+2024/09/12 21:55:18.826999 [INFO] Skipping install X-Ray
+2024/09/12 21:55:18.827003 [INFO] Skipping install Third Party License
+2024/09/12 21:55:18.827007 [INFO] Skipping install httpd
+2024/09/12 21:55:18.827012 [INFO] Instance has NOT been bootstrapped
+2024/09/12 21:55:18.827014 [INFO] Executing instruction: installSqsd
+2024/09/12 21:55:18.827017 [INFO] This is a web server environment instance, skip install sqsd daemon ...
+2024/09/12 21:55:18.827021 [INFO] Instance has NOT been bootstrapped
+2024/09/12 21:55:18.827023 [INFO] Executing instruction: bootstraphealthd
+2024/09/12 21:55:18.827025 [INFO] this is an enhanced health env ...
+2024/09/12 21:55:18.827036 [INFO] bootstrap healthd....
+2024/09/12 21:55:18.827047 [INFO] Running command: /usr/bin/id -u healthd || /usr/sbin/useradd --user-group healthd -s /sbin/nologin --create-home
+2024/09/12 21:55:18.860037 [INFO] /usr/bin/id: healthd: no such user
+
+2024/09/12 21:55:18.860355 [INFO] bootstrap healthd....
+2024/09/12 21:55:18.860369 [INFO] Running command: /usr/bin/id -u healthd || /usr/sbin/useradd --user-group healthd -s /sbin/nologin --create-home
+2024/09/12 21:55:18.863332 [INFO] 1001
+
+2024/09/12 21:55:18.863980 [INFO] configure bundle log for healthd...
+2024/09/12 21:55:18.864027 [INFO] Executing instruction: GetSetupProxyLog
+2024/09/12 21:55:18.864086 [INFO] Skipping Install yum packages
+2024/09/12 21:55:18.864090 [INFO] Skipping Configure Python site-packages
+2024/09/12 21:55:18.864094 [INFO] Skipping Install Python Modules
+2024/09/12 21:55:18.864098 [INFO] Skipping MarkBaked
+2024/09/12 21:55:18.864102 [INFO] Instance has NOT been bootstrapped
+2024/09/12 21:55:18.864104 [INFO] Executing instruction: TuneSystemSettings
+2024/09/12 21:55:18.864107 [INFO] Starting TuneSystemSettings
+2024/09/12 21:55:18.864110 [INFO] Instance has NOT been bootstrapped
+2024/09/12 21:55:18.865811 [INFO] Executing instruction: GetSetupLogRotate
+2024/09/12 21:55:18.865820 [INFO] Initialize LogRotate files and directories
+2024/09/12 21:55:18.880831 [INFO] Instance has NOT been bootstrapped
+2024/09/12 21:55:18.880840 [INFO] Executing instruction: BootstrapCFNHup
+2024/09/12 21:55:18.880842 [INFO] Bootstrap cfn-hup
+2024/09/12 21:55:18.881772 [INFO] Copying file /opt/elasticbeanstalk/config/private/aws-eb-command-handler.conf to /etc/cfn/hooks.d/aws-eb-command-handler.conf
+2024/09/12 21:55:18.882424 [INFO] Executing instruction: StartCFNHup
+2024/09/12 21:55:18.882429 [INFO] Start cfn-hup
+2024/09/12 21:55:18.882440 [INFO] Running command: systemctl show -p PartOf cfn-hup.service
+2024/09/12 21:55:18.894591 [INFO] cfn-hup is not registered with EB yet, registering it now
+2024/09/12 21:55:18.894620 [INFO] Running command: systemctl show -p PartOf cfn-hup.service
+2024/09/12 21:55:18.901507 [INFO] Running command: systemctl daemon-reload
+2024/09/12 21:55:18.996676 [INFO] Running command: systemctl reset-failed
+2024/09/12 21:55:19.001903 [INFO] Running command: systemctl is-enabled aws-eb.target
+2024/09/12 21:55:19.006494 [INFO] Running command: systemctl enable aws-eb.target
+2024/09/12 21:55:19.104446 [INFO] Running command: systemctl start aws-eb.target
+2024/09/12 21:55:19.110493 [INFO] Running command: systemctl enable cfn-hup.service
+2024/09/12 21:55:19.198659 [INFO] Created symlink from /etc/systemd/system/multi-user.target.wants/cfn-hup.service to /etc/systemd/system/cfn-hup.service.
+
+2024/09/12 21:55:19.198697 [INFO] Running command: systemctl is-active cfn-hup.service
+2024/09/12 21:55:19.203566 [INFO] cfn-hup process is not running, starting it now
+2024/09/12 21:55:19.203593 [INFO] Running command: systemctl show -p PartOf cfn-hup.service
+2024/09/12 21:55:19.211226 [INFO] Running command: systemctl is-active cfn-hup.service
+2024/09/12 21:55:19.215733 [INFO] Running command: systemctl start cfn-hup.service
+2024/09/12 21:55:19.265309 [INFO] Instance has NOT been bootstrapped
+2024/09/12 21:55:19.265326 [INFO] Executing instruction: SetupPublishLogCronjob
+2024/09/12 21:55:19.265329 [INFO] Setup publish logs cron job...
+2024/09/12 21:55:19.265334 [INFO] Copying file /opt/elasticbeanstalk/config/private/logtasks/cron/publishlogs to /etc/cron.d/publishlogs
+2024/09/12 21:55:19.266609 [INFO] Instance has NOT been bootstrapped
+2024/09/12 21:55:19.266618 [INFO] Executing instruction: MarkBootstrapped
+2024/09/12 21:55:19.266622 [INFO] Starting MarkBootstrapped
+2024/09/12 21:55:19.266627 [INFO] Instance has NOT been bootstrapped
+2024/09/12 21:55:19.266684 [INFO] Marked instance as Bootstrapped
+2024/09/12 21:55:19.266688 [INFO] Executing instruction: Save CFN Stack Info
+2024/09/12 21:55:19.266732 [INFO] Executing cleanup logic
+2024/09/12 21:55:19.266742 [INFO] Platform Engine finished execution on command: env-launch
+
+2024/09/12 21:57:23.921707 [INFO] Starting...
+2024/09/12 21:57:23.923100 [INFO] Starting EBPlatform-PlatformEngine
+2024/09/12 21:57:23.923126 [INFO] reading event message file
+2024/09/12 21:57:23.923283 [INFO] Engine received EB command cfn-hup-exec
+
+2024/09/12 21:57:23.991995 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2
+2024/09/12 21:57:24.388112 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBBeanstalkMetadata --region us-east-2
+2024/09/12 21:57:24.801709 [INFO] checking whether command app-deploy is applicable to this instance...
+2024/09/12 21:57:24.801726 [INFO] this command is applicable to the instance, thus instance should execute command
+2024/09/12 21:57:24.801730 [INFO] Engine command: (app-deploy)
+
+2024/09/12 21:57:24.801735 [INFO] Downloading EB Application...
+2024/09/12 21:57:24.801738 [INFO] Region: us-east-2
+2024/09/12 21:57:24.801741 [INFO] envID: e-j8pht2gwki
+2024/09/12 21:57:24.801744 [INFO] envBucket: elasticbeanstalk-us-east-2-640168434762
+2024/09/12 21:57:24.801751 [INFO] Using manifest file name from command request
+2024/09/12 21:57:24.801758 [INFO] Unable to get version manifest file.
+2024/09/12 21:57:24.801761 [INFO] Downloading latest manifest available.
+2024/09/12 21:57:24.801770 [INFO] Download latest app version manifest
+2024/09/12 21:57:24.801900 [INFO] resources/environments/e-j8pht2gwki/_runtime/versions/manifest
+2024/09/12 21:57:24.841569 [INFO] latestManifest key *: resources/environments/e-j8pht2gwki/_runtime/versions/manifest_1726178070024
+
+2024/09/12 21:57:24.841720 [INFO] Downloading: bucket: elasticbeanstalk-us-east-2-640168434762, object: /resources/environments/e-j8pht2gwki/_runtime/versions/manifest_1726178070024
+2024/09/12 21:57:24.856989 [INFO] Download successful163bytes downloaded
+2024/09/12 21:57:24.857085 [INFO] Trying to read and parse version manifest...
+2024/09/12 21:57:24.857162 [INFO] Downloading: bucket: elasticbeanstalk-us-east-2-640168434762, object: /resources/environments/e-j8pht2gwki/_runtime/_versions/flight-tracker-app/app-35015-240912_124140788914
+2024/09/12 21:57:27.717395 [INFO] Download successful446794886bytes downloaded
+2024/09/12 21:57:27.717784 [INFO] Executing instruction: ElectLeader
+2024/09/12 21:57:27.717791 [INFO] Running leader election for instance i-0c470a69b4093c25a...
+2024/09/12 21:57:27.717795 [INFO] Calling the cfn-elect-cmd-leader to elect the command leader.
+2024/09/12 21:57:27.717808 [INFO] Running command: /opt/aws/bin/cfn-elect-cmd-leader --stack arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb --command-name ElasticBeanstalkCommand-AWSEBAutoScalingGroup --invocation-id ef48042f-53f8-4558-b7b9-b080be07d0f7 --listener-id i-0c470a69b4093c25a --region us-east-2
+2024/09/12 21:57:28.120523 [INFO] Instance is Leader.
+2024/09/12 21:57:28.120558 [INFO] Executing instruction: stopSqsd
+2024/09/12 21:57:28.120563 [INFO] This is a web server environment instance, skip stop sqsd daemon ...
+2024/09/12 21:57:28.120566 [INFO] Executing instruction: PreBuildEbExtension
+2024/09/12 21:57:28.120569 [INFO] Starting executing the config set Infra-EmbeddedPreBuild.
+2024/09/12 21:57:28.120583 [INFO] Running command: /opt/aws/bin/cfn-init -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2 --configsets Infra-EmbeddedPreBuild
+2024/09/12 21:57:28.604515 [INFO] Finished executing the config set Infra-EmbeddedPreBuild.
+
+2024/09/12 21:57:28.604567 [INFO] Executing instruction: StageApplication
+2024/09/12 21:57:28.605500 [INFO] extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/
+2024/09/12 21:57:28.605518 [INFO] Running command: /usr/bin/unzip -q -o /opt/elasticbeanstalk/deployment/app_source_bundle -d /var/app/staging/
+2024/09/12 21:57:34.574174 [INFO] finished extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/ successfully
+2024/09/12 21:57:34.717039 [INFO] Executing instruction: RunAppDeployPreBuildHooks
+2024/09/12 21:57:34.717097 [INFO] Executing platform hooks in .platform/hooks/prebuild/
+2024/09/12 21:57:34.717114 [INFO] The dir .platform/hooks/prebuild/ does not exist
+2024/09/12 21:57:34.717117 [INFO] Finished running scripts in /var/app/staging/.platform/hooks/prebuild
+2024/09/12 21:57:34.717123 [INFO] Executing instruction: InstallDependency
+2024/09/12 21:57:34.717129 [INFO] checking dependencies file
+2024/09/12 21:57:34.717140 [INFO] Installing dependencies with requirements.txt by using Pip
+2024/09/12 21:57:34.717154 [INFO] Running command: /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt
+2024/09/12 21:57:41.526480 [INFO] Collecting aiohappyeyeballs==2.4.0
+  Downloading aiohappyeyeballs-2.4.0-py3-none-any.whl (12 kB)
+Collecting aiohttp==3.10.5
+  Downloading aiohttp-3.10.5-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.3 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 21.8 MB/s eta 0:00:00
+Collecting aiosignal==1.3.1
+  Downloading aiosignal-1.3.1-py3-none-any.whl (7.6 kB)
+Collecting altair==5.3.0
+  Downloading altair-5.3.0-py3-none-any.whl (857 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 857.8/857.8 KB 87.0 MB/s eta 0:00:00
+Collecting amadeus==10.1.0
+  Downloading amadeus-10.1.0.tar.gz (38 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Collecting annotated-types==0.7.0
+  Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Collecting anyio==4.4.0
+  Downloading anyio-4.4.0-py3-none-any.whl (86 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 86.8/86.8 KB 26.1 MB/s eta 0:00:00
+Collecting async-timeout==4.0.3
+  Downloading async_timeout-4.0.3-py3-none-any.whl (5.7 kB)
+Collecting attrs==24.2.0
+  Downloading attrs-24.2.0-py3-none-any.whl (63 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 63.0/63.0 KB 13.3 MB/s eta 0:00:00
+Collecting blinker==1.8.2
+  Downloading blinker-1.8.2-py3-none-any.whl (9.5 kB)
+Collecting boto3==1.35.15
+  Downloading boto3-1.35.15-py3-none-any.whl (139 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 139.2/139.2 KB 40.1 MB/s eta 0:00:00
+Collecting botocore==1.35.15
+  Downloading botocore-1.35.15-py3-none-any.whl (12.5 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.5/12.5 MB 76.8 MB/s eta 0:00:00
+Collecting cachetools==5.4.0
+  Downloading cachetools-5.4.0-py3-none-any.whl (9.5 kB)
+Collecting certifi==2024.7.4
+  Downloading certifi-2024.7.4-py3-none-any.whl (162 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 163.0/163.0 KB 43.0 MB/s eta 0:00:00
+Collecting charset-normalizer==3.3.2
+  Downloading charset_normalizer-3.3.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (141 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 141.1/141.1 KB 37.3 MB/s eta 0:00:00
+Collecting click==8.1.7
+  Downloading click-8.1.7-py3-none-any.whl (97 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 97.9/97.9 KB 29.1 MB/s eta 0:00:00
+
+2024/09/12 21:57:41.526508 [INFO] ERROR: Could not find a version that satisfies the requirement contourpy==1.2.1 (from versions: 0.0.1, 0.0.2, 0.0.3, 0.0.4, 0.0.5, 1.0.0, 1.0.1, 1.0.2, 1.0.3, 1.0.4, 1.0.5, 1.0.6, 1.0.7, 1.1.0, 1.1.1rc1, 1.1.1)
+ERROR: No matching distribution found for contourpy==1.2.1
+
+2024/09/12 21:57:41.526526 [ERROR] An error occurred during execution of command [app-deploy] - [InstallDependency]. Stop running the command. Error: fail to install dependencies with requirements.txt file with error Command /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt failed with error exit status 1. Stderr:ERROR: Could not find a version that satisfies the requirement contourpy==1.2.1 (from versions: 0.0.1, 0.0.2, 0.0.3, 0.0.4, 0.0.5, 1.0.0, 1.0.1, 1.0.2, 1.0.3, 1.0.4, 1.0.5, 1.0.6, 1.0.7, 1.1.0, 1.1.1rc1, 1.1.1)
+ERROR: No matching distribution found for contourpy==1.2.1
+ 
+
+2024/09/12 21:57:41.526530 [INFO] Executing cleanup logic
+2024/09/12 21:57:41.526683 [INFO] CommandService Response: {"status":"FAILURE","api_version":"1.0","results":[{"status":"FAILURE","msg":"Engine execution has encountered an error.","returncode":1,"events":[{"msg":"Instance deployment failed to install application dependencies. The deployment failed.","timestamp":1726178261526,"severity":"ERROR"},{"msg":"Instance deployment failed. For details, see 'eb-engine.log'.","timestamp":1726178261526,"severity":"ERROR"}]}]}
+
+2024/09/12 21:57:41.527267 [INFO] Platform Engine finished execution on command: app-deploy
+
+2024/09/12 21:59:32.715931 [INFO] Starting...
+2024/09/12 21:59:32.716053 [INFO] Starting EBPlatform-PlatformEngine
+2024/09/12 21:59:32.716167 [INFO] reading event message file
+2024/09/12 21:59:32.716766 [INFO] Engine received EB command cfn-hup-exec
+
+2024/09/12 21:59:32.781709 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2
+2024/09/12 21:59:33.264455 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBBeanstalkMetadata --region us-east-2
+2024/09/12 21:59:33.703363 [INFO] checking whether command app-deploy is applicable to this instance...
+2024/09/12 21:59:33.703376 [INFO] this command is applicable to the instance, thus instance should execute command
+2024/09/12 21:59:33.703380 [INFO] Engine command: (app-deploy)
+
+2024/09/12 21:59:33.703383 [INFO] Downloading EB Application...
+2024/09/12 21:59:33.703386 [INFO] Region: us-east-2
+2024/09/12 21:59:33.703389 [INFO] envID: e-j8pht2gwki
+2024/09/12 21:59:33.703392 [INFO] envBucket: elasticbeanstalk-us-east-2-640168434762
+2024/09/12 21:59:33.703396 [INFO] Using manifest file name from command request
+2024/09/12 21:59:33.703402 [INFO] Manifest name is : manifest_1726178370462
+2024/09/12 21:59:33.703405 [INFO] Download app version manifest
+2024/09/12 21:59:33.703919 [INFO] Downloading: bucket: elasticbeanstalk-us-east-2-640168434762, object: /resources/environments/e-j8pht2gwki/_runtime/versions/manifest_1726178370462
+2024/09/12 21:59:33.739888 [INFO] Download successful116bytes downloaded
+2024/09/12 21:59:33.740031 [INFO] Trying to read and parse version manifest...
+2024/09/12 21:59:33.752137 [INFO] Downloading: bucket: elasticbeanstalk-us-east-2-640168434762, object: /resources/environments/e-j8pht2gwki/_runtime/_versions/flight-tracker-app/app-35015-240912_175926436952
+2024/09/12 21:59:33.768057 [INFO] Download successful8287bytes downloaded
+2024/09/12 21:59:33.768242 [INFO] Executing instruction: ElectLeader
+2024/09/12 21:59:33.768249 [INFO] Running leader election for instance i-0c470a69b4093c25a...
+2024/09/12 21:59:33.768252 [INFO] Calling the cfn-elect-cmd-leader to elect the command leader.
+2024/09/12 21:59:33.768263 [INFO] Running command: /opt/aws/bin/cfn-elect-cmd-leader --stack arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb --command-name ElasticBeanstalkCommand-AWSEBAutoScalingGroup --invocation-id 919db02d-9165-4af4-822d-72bc57eea487 --listener-id i-0c470a69b4093c25a --region us-east-2
+2024/09/12 21:59:34.185694 [INFO] Instance is Leader.
+2024/09/12 21:59:34.185743 [INFO] Executing instruction: stopSqsd
+2024/09/12 21:59:34.185747 [INFO] This is a web server environment instance, skip stop sqsd daemon ...
+2024/09/12 21:59:34.185750 [INFO] Executing instruction: PreBuildEbExtension
+2024/09/12 21:59:34.185753 [INFO] Starting executing the config set Infra-EmbeddedPreBuild.
+2024/09/12 21:59:34.185768 [INFO] Running command: /opt/aws/bin/cfn-init -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2 --configsets Infra-EmbeddedPreBuild
+2024/09/12 21:59:34.644376 [INFO] Finished executing the config set Infra-EmbeddedPreBuild.
+
+2024/09/12 21:59:34.644399 [INFO] Executing instruction: StageApplication
+2024/09/12 21:59:34.990856 [INFO] extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/
+2024/09/12 21:59:34.990877 [INFO] Running command: /usr/bin/unzip -q -o /opt/elasticbeanstalk/deployment/app_source_bundle -d /var/app/staging/
+2024/09/12 21:59:34.996093 [INFO] finished extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/ successfully
+2024/09/12 21:59:34.996566 [INFO] Executing instruction: RunAppDeployPreBuildHooks
+2024/09/12 21:59:34.996587 [INFO] Executing platform hooks in .platform/hooks/prebuild/
+2024/09/12 21:59:34.996600 [INFO] The dir .platform/hooks/prebuild/ does not exist
+2024/09/12 21:59:34.996603 [INFO] Finished running scripts in /var/app/staging/.platform/hooks/prebuild
+2024/09/12 21:59:34.996606 [INFO] Executing instruction: InstallDependency
+2024/09/12 21:59:34.996610 [INFO] checking dependencies file
+2024/09/12 21:59:34.996620 [INFO] Installing dependencies with requirements.txt by using Pip
+2024/09/12 21:59:34.996627 [INFO] Running command: /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt
+2024/09/12 21:59:37.312498 [INFO] Collecting Flask==2.3.2
+  Downloading Flask-2.3.2-py3-none-any.whl (96 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 96.9/96.9 KB 4.7 MB/s eta 0:00:00
+Collecting Flask-CORS==4.0.0
+  Downloading Flask_Cors-4.0.0-py2.py3-none-any.whl (14 kB)
+Collecting google-cloud-storage==2.10.0
+  Downloading google_cloud_storage-2.10.0-py2.py3-none-any.whl (114 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 114.6/114.6 KB 4.6 MB/s eta 0:00:00
+Collecting pandas==2.0.3
+  Downloading pandas-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.4 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.4/12.4 MB 98.3 MB/s eta 0:00:00
+
+2024/09/12 21:59:37.312516 [INFO] ERROR: Could not find a version that satisfies the requirement numpy==1.25.2 (from versions: 1.3.0, 1.4.1, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.7.1, 1.7.2, 1.8.0, 1.8.1, 1.8.2, 1.9.0, 1.9.1, 1.9.2, 1.9.3, 1.10.0.post2, 1.10.1, 1.10.2, 1.10.4, 1.11.0, 1.11.1, 1.11.2, 1.11.3, 1.12.0, 1.12.1, 1.13.0, 1.13.1, 1.13.3, 1.14.0, 1.14.1, 1.14.2, 1.14.3, 1.14.4, 1.14.5, 1.14.6, 1.15.0, 1.15.1, 1.15.2, 1.15.3, 1.15.4, 1.16.0, 1.16.1, 1.16.2, 1.16.3, 1.16.4, 1.16.5, 1.16.6, 1.17.0, 1.17.1, 1.17.2, 1.17.3, 1.17.4, 1.17.5, 1.18.0, 1.18.1, 1.18.2, 1.18.3, 1.18.4, 1.18.5, 1.19.0, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.19.5, 1.20.0, 1.20.1, 1.20.2, 1.20.3, 1.21.0, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.22.0, 1.22.1, 1.22.2, 1.22.3, 1.22.4, 1.23.0, 1.23.1, 1.23.2, 1.23.3, 1.23.4, 1.23.5, 1.24.0, 1.24.1, 1.24.2, 1.24.3, 1.24.4)
+ERROR: No matching distribution found for numpy==1.25.2
+
+2024/09/12 21:59:37.312532 [ERROR] An error occurred during execution of command [app-deploy] - [InstallDependency]. Stop running the command. Error: fail to install dependencies with requirements.txt file with error Command /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt failed with error exit status 1. Stderr:ERROR: Could not find a version that satisfies the requirement numpy==1.25.2 (from versions: 1.3.0, 1.4.1, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.7.1, 1.7.2, 1.8.0, 1.8.1, 1.8.2, 1.9.0, 1.9.1, 1.9.2, 1.9.3, 1.10.0.post2, 1.10.1, 1.10.2, 1.10.4, 1.11.0, 1.11.1, 1.11.2, 1.11.3, 1.12.0, 1.12.1, 1.13.0, 1.13.1, 1.13.3, 1.14.0, 1.14.1, 1.14.2, 1.14.3, 1.14.4, 1.14.5, 1.14.6, 1.15.0, 1.15.1, 1.15.2, 1.15.3, 1.15.4, 1.16.0, 1.16.1, 1.16.2, 1.16.3, 1.16.4, 1.16.5, 1.16.6, 1.17.0, 1.17.1, 1.17.2, 1.17.3, 1.17.4, 1.17.5, 1.18.0, 1.18.1, 1.18.2, 1.18.3, 1.18.4, 1.18.5, 1.19.0, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.19.5, 1.20.0, 1.20.1, 1.20.2, 1.20.3, 1.21.0, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.22.0, 1.22.1, 1.22.2, 1.22.3, 1.22.4, 1.23.0, 1.23.1, 1.23.2, 1.23.3, 1.23.4, 1.23.5, 1.24.0, 1.24.1, 1.24.2, 1.24.3, 1.24.4)
+ERROR: No matching distribution found for numpy==1.25.2
+ 
+
+2024/09/12 21:59:37.312538 [INFO] Executing cleanup logic
+2024/09/12 21:59:37.312628 [INFO] CommandService Response: {"status":"FAILURE","api_version":"1.0","results":[{"status":"FAILURE","msg":"Engine execution has encountered an error.","returncode":1,"events":[{"msg":"Instance deployment failed to install application dependencies. The deployment failed.","timestamp":1726178377312,"severity":"ERROR"},{"msg":"Instance deployment failed. For details, see 'eb-engine.log'.","timestamp":1726178377312,"severity":"ERROR"}]}]}
+
+2024/09/12 21:59:37.313236 [INFO] Platform Engine finished execution on command: app-deploy
+
+2024/09/12 22:09:35.378409 [INFO] Starting...
+2024/09/12 22:09:35.378459 [INFO] Starting EBPlatform-PlatformEngine
+2024/09/12 22:09:35.378484 [INFO] reading event message file
+2024/09/12 22:09:35.378796 [INFO] Engine received EB command cfn-hup-exec
+
+2024/09/12 22:09:35.445609 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2
+2024/09/12 22:09:35.860876 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBBeanstalkMetadata --region us-east-2
+2024/09/12 22:09:36.267016 [INFO] checking whether command config-deploy is applicable to this instance...
+2024/09/12 22:09:36.267031 [INFO] this command is applicable to the instance, thus instance should execute command
+2024/09/12 22:09:36.267033 [INFO] Engine command: (config-deploy)
+
+2024/09/12 22:09:36.267037 [INFO] Using manifest file name from command request
+2024/09/12 22:09:36.267043 [INFO] Unable to get version manifest file.
+2024/09/12 22:09:36.267044 [INFO] Downloading latest manifest available.
+2024/09/12 22:09:36.267047 [INFO] Download latest app version manifest
+2024/09/12 22:09:36.267186 [INFO] resources/environments/e-j8pht2gwki/_runtime/versions/manifest
+2024/09/12 22:09:36.324548 [INFO] latestManifest key *: resources/environments/e-j8pht2gwki/_runtime/versions/manifest_1726178954805
+
+2024/09/12 22:09:36.324810 [INFO] Downloading: bucket: elasticbeanstalk-us-east-2-640168434762, object: /resources/environments/e-j8pht2gwki/_runtime/versions/manifest_1726178954805
+2024/09/12 22:09:36.340028 [INFO] Download successful163bytes downloaded
+2024/09/12 22:09:36.340169 [INFO] Trying to read and parse version manifest...
+2024/09/12 22:09:36.340399 [INFO] Executing instruction: stopSqsd
+2024/09/12 22:09:36.340405 [INFO] This is a web server environment instance, skip stop sqsd daemon ...
+2024/09/12 22:09:36.340409 [INFO] Executing instruction: StageApplication
+2024/09/12 22:09:36.340700 [INFO] extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/
+2024/09/12 22:09:36.340715 [INFO] Running command: /usr/bin/unzip -q -o /opt/elasticbeanstalk/deployment/app_source_bundle -d /var/app/staging/
+2024/09/12 22:09:36.346348 [INFO] finished extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/ successfully
+2024/09/12 22:09:36.346970 [INFO] Executing instruction: RunConfigDeployPreBuildHooks
+2024/09/12 22:09:36.346989 [INFO] Executing platform hooks in .platform/confighooks/prebuild/
+2024/09/12 22:09:36.347089 [INFO] The dir .platform/confighooks/prebuild/ does not exist
+2024/09/12 22:09:36.347092 [INFO] Finished running scripts in /var/app/staging/.platform/confighooks/prebuild
+2024/09/12 22:09:36.347097 [INFO] Executing instruction: InstallDependency
+2024/09/12 22:09:36.347101 [INFO] checking dependencies file
+2024/09/12 22:09:36.347112 [INFO] Installing dependencies with requirements.txt by using Pip
+2024/09/12 22:09:36.347120 [INFO] Running command: /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt
+2024/09/12 22:09:38.884645 [INFO] Collecting Flask==2.3.2
+  Using cached Flask-2.3.2-py3-none-any.whl (96 kB)
+Collecting Flask-CORS==4.0.0
+  Using cached Flask_Cors-4.0.0-py2.py3-none-any.whl (14 kB)
+Collecting google-cloud-storage==2.10.0
+  Using cached google_cloud_storage-2.10.0-py2.py3-none-any.whl (114 kB)
+Collecting pandas==2.0.3
+  Using cached pandas-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.4 MB)
+
+2024/09/12 22:09:38.884664 [INFO] ERROR: Could not find a version that satisfies the requirement numpy==1.25.2 (from versions: 1.3.0, 1.4.1, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.7.1, 1.7.2, 1.8.0, 1.8.1, 1.8.2, 1.9.0, 1.9.1, 1.9.2, 1.9.3, 1.10.0.post2, 1.10.1, 1.10.2, 1.10.4, 1.11.0, 1.11.1, 1.11.2, 1.11.3, 1.12.0, 1.12.1, 1.13.0, 1.13.1, 1.13.3, 1.14.0, 1.14.1, 1.14.2, 1.14.3, 1.14.4, 1.14.5, 1.14.6, 1.15.0, 1.15.1, 1.15.2, 1.15.3, 1.15.4, 1.16.0, 1.16.1, 1.16.2, 1.16.3, 1.16.4, 1.16.5, 1.16.6, 1.17.0, 1.17.1, 1.17.2, 1.17.3, 1.17.4, 1.17.5, 1.18.0, 1.18.1, 1.18.2, 1.18.3, 1.18.4, 1.18.5, 1.19.0, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.19.5, 1.20.0, 1.20.1, 1.20.2, 1.20.3, 1.21.0, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.22.0, 1.22.1, 1.22.2, 1.22.3, 1.22.4, 1.23.0, 1.23.1, 1.23.2, 1.23.3, 1.23.4, 1.23.5, 1.24.0, 1.24.1, 1.24.2, 1.24.3, 1.24.4)
+ERROR: No matching distribution found for numpy==1.25.2
+
+2024/09/12 22:09:38.884685 [ERROR] An error occurred during execution of command [config-deploy] - [InstallDependency]. Stop running the command. Error: fail to install dependencies with requirements.txt file with error Command /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt failed with error exit status 1. Stderr:ERROR: Could not find a version that satisfies the requirement numpy==1.25.2 (from versions: 1.3.0, 1.4.1, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.7.1, 1.7.2, 1.8.0, 1.8.1, 1.8.2, 1.9.0, 1.9.1, 1.9.2, 1.9.3, 1.10.0.post2, 1.10.1, 1.10.2, 1.10.4, 1.11.0, 1.11.1, 1.11.2, 1.11.3, 1.12.0, 1.12.1, 1.13.0, 1.13.1, 1.13.3, 1.14.0, 1.14.1, 1.14.2, 1.14.3, 1.14.4, 1.14.5, 1.14.6, 1.15.0, 1.15.1, 1.15.2, 1.15.3, 1.15.4, 1.16.0, 1.16.1, 1.16.2, 1.16.3, 1.16.4, 1.16.5, 1.16.6, 1.17.0, 1.17.1, 1.17.2, 1.17.3, 1.17.4, 1.17.5, 1.18.0, 1.18.1, 1.18.2, 1.18.3, 1.18.4, 1.18.5, 1.19.0, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.19.5, 1.20.0, 1.20.1, 1.20.2, 1.20.3, 1.21.0, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.22.0, 1.22.1, 1.22.2, 1.22.3, 1.22.4, 1.23.0, 1.23.1, 1.23.2, 1.23.3, 1.23.4, 1.23.5, 1.24.0, 1.24.1, 1.24.2, 1.24.3, 1.24.4)
+ERROR: No matching distribution found for numpy==1.25.2
+ 
+
+2024/09/12 22:09:38.884689 [INFO] Executing cleanup logic
+2024/09/12 22:09:38.884781 [INFO] CommandService Response: {"status":"FAILURE","api_version":"1.0","results":[{"status":"FAILURE","msg":"Engine execution has encountered an error.","returncode":1,"events":[{"msg":"Instance deployment failed to install application dependencies. The deployment failed.","timestamp":1726178978884,"severity":"ERROR"},{"msg":"Instance deployment failed. For details, see 'eb-engine.log'.","timestamp":1726178978884,"severity":"ERROR"}]}]}
+
+2024/09/12 22:09:38.885563 [INFO] Platform Engine finished execution on command: config-deploy
+
+2024/09/12 22:19:05.978003 [INFO] Starting...
+2024/09/12 22:19:05.978060 [INFO] Starting EBPlatform-PlatformEngine
+2024/09/12 22:19:05.978184 [INFO] reading event message file
+2024/09/12 22:19:05.978352 [INFO] Engine received EB command cfn-hup-exec
+
+2024/09/12 22:19:06.087534 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2
+2024/09/12 22:19:06.690201 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBBeanstalkMetadata --region us-east-2
+2024/09/12 22:19:07.047803 [INFO] checking whether command config-deploy is applicable to this instance...
+2024/09/12 22:19:07.047832 [INFO] this command is applicable to the instance, thus instance should execute command
+2024/09/12 22:19:07.047837 [INFO] Engine command: (config-deploy)
+
+2024/09/12 22:19:07.047842 [INFO] Using manifest file name from command request
+2024/09/12 22:19:07.047848 [INFO] Unable to get version manifest file.
+2024/09/12 22:19:07.047851 [INFO] Downloading latest manifest available.
+2024/09/12 22:19:07.047853 [INFO] Download latest app version manifest
+2024/09/12 22:19:07.048004 [INFO] resources/environments/e-j8pht2gwki/_runtime/versions/manifest
+2024/09/12 22:19:07.089388 [INFO] latestManifest key *: resources/environments/e-j8pht2gwki/_runtime/versions/manifest_1726179525630
+
+2024/09/12 22:19:07.089560 [INFO] Downloading: bucket: elasticbeanstalk-us-east-2-640168434762, object: /resources/environments/e-j8pht2gwki/_runtime/versions/manifest_1726179525630
+2024/09/12 22:19:07.104291 [INFO] Download successful163bytes downloaded
+2024/09/12 22:19:07.104431 [INFO] Trying to read and parse version manifest...
+2024/09/12 22:19:07.104641 [INFO] Executing instruction: stopSqsd
+2024/09/12 22:19:07.104647 [INFO] This is a web server environment instance, skip stop sqsd daemon ...
+2024/09/12 22:19:07.104649 [INFO] Executing instruction: StageApplication
+2024/09/12 22:19:07.104876 [INFO] extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/
+2024/09/12 22:19:07.104886 [INFO] Running command: /usr/bin/unzip -q -o /opt/elasticbeanstalk/deployment/app_source_bundle -d /var/app/staging/
+2024/09/12 22:19:07.108265 [INFO] finished extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/ successfully
+2024/09/12 22:19:07.108757 [INFO] Executing instruction: RunConfigDeployPreBuildHooks
+2024/09/12 22:19:07.108775 [INFO] Executing platform hooks in .platform/confighooks/prebuild/
+2024/09/12 22:19:07.108790 [INFO] The dir .platform/confighooks/prebuild/ does not exist
+2024/09/12 22:19:07.108794 [INFO] Finished running scripts in /var/app/staging/.platform/confighooks/prebuild
+2024/09/12 22:19:07.108798 [INFO] Executing instruction: InstallDependency
+2024/09/12 22:19:07.108802 [INFO] checking dependencies file
+2024/09/12 22:19:07.108811 [INFO] Installing dependencies with requirements.txt by using Pip
+2024/09/12 22:19:07.108818 [INFO] Running command: /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt
+2024/09/12 22:19:09.207211 [INFO] Collecting Flask==2.3.2
+  Using cached Flask-2.3.2-py3-none-any.whl (96 kB)
+Collecting Flask-CORS==4.0.0
+  Using cached Flask_Cors-4.0.0-py2.py3-none-any.whl (14 kB)
+Collecting google-cloud-storage==2.10.0
+  Using cached google_cloud_storage-2.10.0-py2.py3-none-any.whl (114 kB)
+Collecting pandas==2.0.3
+  Using cached pandas-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.4 MB)
+
+2024/09/12 22:19:09.207232 [INFO] ERROR: Could not find a version that satisfies the requirement numpy==1.25.2 (from versions: 1.3.0, 1.4.1, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.7.1, 1.7.2, 1.8.0, 1.8.1, 1.8.2, 1.9.0, 1.9.1, 1.9.2, 1.9.3, 1.10.0.post2, 1.10.1, 1.10.2, 1.10.4, 1.11.0, 1.11.1, 1.11.2, 1.11.3, 1.12.0, 1.12.1, 1.13.0, 1.13.1, 1.13.3, 1.14.0, 1.14.1, 1.14.2, 1.14.3, 1.14.4, 1.14.5, 1.14.6, 1.15.0, 1.15.1, 1.15.2, 1.15.3, 1.15.4, 1.16.0, 1.16.1, 1.16.2, 1.16.3, 1.16.4, 1.16.5, 1.16.6, 1.17.0, 1.17.1, 1.17.2, 1.17.3, 1.17.4, 1.17.5, 1.18.0, 1.18.1, 1.18.2, 1.18.3, 1.18.4, 1.18.5, 1.19.0, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.19.5, 1.20.0, 1.20.1, 1.20.2, 1.20.3, 1.21.0, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.22.0, 1.22.1, 1.22.2, 1.22.3, 1.22.4, 1.23.0, 1.23.1, 1.23.2, 1.23.3, 1.23.4, 1.23.5, 1.24.0, 1.24.1, 1.24.2, 1.24.3, 1.24.4)
+ERROR: No matching distribution found for numpy==1.25.2
+
+2024/09/12 22:19:09.207252 [ERROR] An error occurred during execution of command [config-deploy] - [InstallDependency]. Stop running the command. Error: fail to install dependencies with requirements.txt file with error Command /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt failed with error exit status 1. Stderr:ERROR: Could not find a version that satisfies the requirement numpy==1.25.2 (from versions: 1.3.0, 1.4.1, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.7.1, 1.7.2, 1.8.0, 1.8.1, 1.8.2, 1.9.0, 1.9.1, 1.9.2, 1.9.3, 1.10.0.post2, 1.10.1, 1.10.2, 1.10.4, 1.11.0, 1.11.1, 1.11.2, 1.11.3, 1.12.0, 1.12.1, 1.13.0, 1.13.1, 1.13.3, 1.14.0, 1.14.1, 1.14.2, 1.14.3, 1.14.4, 1.14.5, 1.14.6, 1.15.0, 1.15.1, 1.15.2, 1.15.3, 1.15.4, 1.16.0, 1.16.1, 1.16.2, 1.16.3, 1.16.4, 1.16.5, 1.16.6, 1.17.0, 1.17.1, 1.17.2, 1.17.3, 1.17.4, 1.17.5, 1.18.0, 1.18.1, 1.18.2, 1.18.3, 1.18.4, 1.18.5, 1.19.0, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.19.5, 1.20.0, 1.20.1, 1.20.2, 1.20.3, 1.21.0, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.22.0, 1.22.1, 1.22.2, 1.22.3, 1.22.4, 1.23.0, 1.23.1, 1.23.2, 1.23.3, 1.23.4, 1.23.5, 1.24.0, 1.24.1, 1.24.2, 1.24.3, 1.24.4)
+ERROR: No matching distribution found for numpy==1.25.2
+ 
+
+2024/09/12 22:19:09.207265 [INFO] Executing cleanup logic
+2024/09/12 22:19:09.207355 [INFO] CommandService Response: {"status":"FAILURE","api_version":"1.0","results":[{"status":"FAILURE","msg":"Engine execution has encountered an error.","returncode":1,"events":[{"msg":"Instance deployment failed to install application dependencies. The deployment failed.","timestamp":1726179549207,"severity":"ERROR"},{"msg":"Instance deployment failed. For details, see 'eb-engine.log'.","timestamp":1726179549207,"severity":"ERROR"}]}]}
+
+2024/09/12 22:19:09.208033 [INFO] Platform Engine finished execution on command: config-deploy
+
+2024/09/12 22:40:11.919909 [INFO] Starting...
+2024/09/12 22:40:11.919957 [INFO] Starting EBPlatform-PlatformEngine
+2024/09/12 22:40:11.919975 [INFO] reading event message file
+2024/09/12 22:40:11.920177 [INFO] Engine received EB command cfn-hup-exec
+
+2024/09/12 22:40:11.988065 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2
+2024/09/12 22:40:12.542595 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBBeanstalkMetadata --region us-east-2
+2024/09/12 22:40:12.891684 [INFO] checking whether command tail-log is applicable to this instance...
+2024/09/12 22:40:12.891696 [INFO] this command is applicable to the instance, thus instance should execute command
+2024/09/12 22:40:12.891698 [INFO] Engine command: (tail-log)
+
+2024/09/12 22:40:12.891753 [INFO] Executing instruction: GetTailLogs
+2024/09/12 22:40:12.891756 [INFO] Tail Logs...
+2024/09/12 22:40:12.893635 [INFO] Running command: tail -n 100 /var/log/eb-engine.log
+2024/09/12 22:40:12.897988 [INFO] Running command: tail -n 100 /var/log/eb-hooks.log
+2024/09/12 22:40:12.964693 [INFO] Executing cleanup logic
+2024/09/12 22:40:12.964785 [INFO] CommandService Response: {"status":"SUCCESS","api_version":"1.0","results":[{"status":"SUCCESS","msg":"Engine execution has succeeded.","returncode":0,"events":[{"msg":"Instance deployment completed successfully.","timestamp":1726180812964,"severity":"INFO"}]}]}
+
+2024/09/12 22:40:12.964805 [INFO] Platform Engine finished execution on command: tail-log
+
+2024/09/12 22:45:53.829547 [INFO] Starting...
+2024/09/12 22:45:53.829598 [INFO] Starting EBPlatform-PlatformEngine
+2024/09/12 22:45:53.829619 [INFO] reading event message file
+2024/09/12 22:45:53.829814 [INFO] Engine received EB command cfn-hup-exec
+
+2024/09/12 22:45:53.889013 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2
+2024/09/12 22:45:54.299257 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBBeanstalkMetadata --region us-east-2
+2024/09/12 22:45:54.661495 [INFO] checking whether command app-deploy is applicable to this instance...
+2024/09/12 22:45:54.661509 [INFO] this command is applicable to the instance, thus instance should execute command
+2024/09/12 22:45:54.661512 [INFO] Engine command: (app-deploy)
+
+2024/09/12 22:45:54.661517 [INFO] Downloading EB Application...
+2024/09/12 22:45:54.661520 [INFO] Region: us-east-2
+2024/09/12 22:45:54.661523 [INFO] envID: e-j8pht2gwki
+2024/09/12 22:45:54.661527 [INFO] envBucket: elasticbeanstalk-us-east-2-640168434762
+2024/09/12 22:45:54.661537 [INFO] Using manifest file name from command request
+2024/09/12 22:45:54.661544 [INFO] Manifest name is : manifest_1726181151740
+2024/09/12 22:45:54.661547 [INFO] Download app version manifest
+2024/09/12 22:45:54.661739 [INFO] Downloading: bucket: elasticbeanstalk-us-east-2-640168434762, object: /resources/environments/e-j8pht2gwki/_runtime/versions/manifest_1726181151740
+2024/09/12 22:45:54.702686 [INFO] Download successful116bytes downloaded
+2024/09/12 22:45:54.702807 [INFO] Trying to read and parse version manifest...
+2024/09/12 22:45:54.702918 [INFO] Downloading: bucket: elasticbeanstalk-us-east-2-640168434762, object: /resources/environments/e-j8pht2gwki/_runtime/_versions/flight-tracker-app/app-35015-240912_184547556012
+2024/09/12 22:45:54.719006 [INFO] Download successful8287bytes downloaded
+2024/09/12 22:45:54.719212 [INFO] Executing instruction: ElectLeader
+2024/09/12 22:45:54.719219 [INFO] Running leader election for instance i-0c470a69b4093c25a...
+2024/09/12 22:45:54.719223 [INFO] Calling the cfn-elect-cmd-leader to elect the command leader.
+2024/09/12 22:45:54.719236 [INFO] Running command: /opt/aws/bin/cfn-elect-cmd-leader --stack arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb --command-name ElasticBeanstalkCommand-AWSEBAutoScalingGroup --invocation-id ab587552-19c7-44a1-92df-836948dfbc4f --listener-id i-0c470a69b4093c25a --region us-east-2
+2024/09/12 22:45:55.180995 [INFO] Instance is Leader.
+2024/09/12 22:45:55.181151 [INFO] Executing instruction: stopSqsd
+2024/09/12 22:45:55.181159 [INFO] This is a web server environment instance, skip stop sqsd daemon ...
+2024/09/12 22:45:55.181162 [INFO] Executing instruction: PreBuildEbExtension
+2024/09/12 22:45:55.181165 [INFO] Starting executing the config set Infra-EmbeddedPreBuild.
+2024/09/12 22:45:55.181178 [INFO] Running command: /opt/aws/bin/cfn-init -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2 --configsets Infra-EmbeddedPreBuild
+2024/09/12 22:45:55.542694 [INFO] Finished executing the config set Infra-EmbeddedPreBuild.
+
+2024/09/12 22:45:55.542716 [INFO] Executing instruction: StageApplication
+2024/09/12 22:45:55.543038 [INFO] extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/
+2024/09/12 22:45:55.543050 [INFO] Running command: /usr/bin/unzip -q -o /opt/elasticbeanstalk/deployment/app_source_bundle -d /var/app/staging/
+2024/09/12 22:45:55.546623 [INFO] finished extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/ successfully
+2024/09/12 22:45:55.547232 [INFO] Executing instruction: RunAppDeployPreBuildHooks
+2024/09/12 22:45:55.547252 [INFO] Executing platform hooks in .platform/hooks/prebuild/
+2024/09/12 22:45:55.547267 [INFO] The dir .platform/hooks/prebuild/ does not exist
+2024/09/12 22:45:55.547270 [INFO] Finished running scripts in /var/app/staging/.platform/hooks/prebuild
+2024/09/12 22:45:55.547274 [INFO] Executing instruction: InstallDependency
+2024/09/12 22:45:55.547278 [INFO] checking dependencies file
+2024/09/12 22:45:55.547288 [INFO] Installing dependencies with requirements.txt by using Pip
+2024/09/12 22:45:55.547297 [INFO] Running command: /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt
+2024/09/12 22:45:57.643750 [INFO] Collecting Flask==2.3.2
+  Using cached Flask-2.3.2-py3-none-any.whl (96 kB)
+Collecting Flask-CORS==4.0.0
+  Using cached Flask_Cors-4.0.0-py2.py3-none-any.whl (14 kB)
+Collecting google-cloud-storage==2.10.0
+  Using cached google_cloud_storage-2.10.0-py2.py3-none-any.whl (114 kB)
+Collecting pandas==2.0.3
+  Using cached pandas-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.4 MB)
+
+2024/09/12 22:45:57.643771 [INFO] ERROR: Could not find a version that satisfies the requirement numpy==1.25.2 (from versions: 1.3.0, 1.4.1, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.7.1, 1.7.2, 1.8.0, 1.8.1, 1.8.2, 1.9.0, 1.9.1, 1.9.2, 1.9.3, 1.10.0.post2, 1.10.1, 1.10.2, 1.10.4, 1.11.0, 1.11.1, 1.11.2, 1.11.3, 1.12.0, 1.12.1, 1.13.0, 1.13.1, 1.13.3, 1.14.0, 1.14.1, 1.14.2, 1.14.3, 1.14.4, 1.14.5, 1.14.6, 1.15.0, 1.15.1, 1.15.2, 1.15.3, 1.15.4, 1.16.0, 1.16.1, 1.16.2, 1.16.3, 1.16.4, 1.16.5, 1.16.6, 1.17.0, 1.17.1, 1.17.2, 1.17.3, 1.17.4, 1.17.5, 1.18.0, 1.18.1, 1.18.2, 1.18.3, 1.18.4, 1.18.5, 1.19.0, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.19.5, 1.20.0, 1.20.1, 1.20.2, 1.20.3, 1.21.0, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.22.0, 1.22.1, 1.22.2, 1.22.3, 1.22.4, 1.23.0, 1.23.1, 1.23.2, 1.23.3, 1.23.4, 1.23.5, 1.24.0, 1.24.1, 1.24.2, 1.24.3, 1.24.4)
+ERROR: No matching distribution found for numpy==1.25.2
+
+2024/09/12 22:45:57.643804 [ERROR] An error occurred during execution of command [app-deploy] - [InstallDependency]. Stop running the command. Error: fail to install dependencies with requirements.txt file with error Command /var/app/venv/staging-LQM1lest/bin/pip install -r requirements.txt failed with error exit status 1. Stderr:ERROR: Could not find a version that satisfies the requirement numpy==1.25.2 (from versions: 1.3.0, 1.4.1, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.7.1, 1.7.2, 1.8.0, 1.8.1, 1.8.2, 1.9.0, 1.9.1, 1.9.2, 1.9.3, 1.10.0.post2, 1.10.1, 1.10.2, 1.10.4, 1.11.0, 1.11.1, 1.11.2, 1.11.3, 1.12.0, 1.12.1, 1.13.0, 1.13.1, 1.13.3, 1.14.0, 1.14.1, 1.14.2, 1.14.3, 1.14.4, 1.14.5, 1.14.6, 1.15.0, 1.15.1, 1.15.2, 1.15.3, 1.15.4, 1.16.0, 1.16.1, 1.16.2, 1.16.3, 1.16.4, 1.16.5, 1.16.6, 1.17.0, 1.17.1, 1.17.2, 1.17.3, 1.17.4, 1.17.5, 1.18.0, 1.18.1, 1.18.2, 1.18.3, 1.18.4, 1.18.5, 1.19.0, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.19.5, 1.20.0, 1.20.1, 1.20.2, 1.20.3, 1.21.0, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.22.0, 1.22.1, 1.22.2, 1.22.3, 1.22.4, 1.23.0, 1.23.1, 1.23.2, 1.23.3, 1.23.4, 1.23.5, 1.24.0, 1.24.1, 1.24.2, 1.24.3, 1.24.4)
+ERROR: No matching distribution found for numpy==1.25.2
+ 
+
+2024/09/12 22:45:57.643809 [INFO] Executing cleanup logic
+2024/09/12 22:45:57.643932 [INFO] CommandService Response: {"status":"FAILURE","api_version":"1.0","results":[{"status":"FAILURE","msg":"Engine execution has encountered an error.","returncode":1,"events":[{"msg":"Instance deployment failed to install application dependencies. The deployment failed.","timestamp":1726181157643,"severity":"ERROR"},{"msg":"Instance deployment failed. For details, see 'eb-engine.log'.","timestamp":1726181157643,"severity":"ERROR"}]}]}
+
+2024/09/12 22:45:57.644656 [INFO] Platform Engine finished execution on command: app-deploy
+
+2024/09/12 22:46:50.337788 [INFO] Starting...
+2024/09/12 22:46:50.337838 [INFO] Starting EBPlatform-PlatformEngine
+2024/09/12 22:46:50.337858 [INFO] reading event message file
+2024/09/12 22:46:50.338065 [INFO] Engine received EB command cfn-hup-exec
+
+2024/09/12 22:46:50.430830 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2
+2024/09/12 22:46:50.923300 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBBeanstalkMetadata --region us-east-2
+2024/09/12 22:46:51.252017 [INFO] checking whether command tail-log is applicable to this instance...
+2024/09/12 22:46:51.252039 [INFO] this command is applicable to the instance, thus instance should execute command
+2024/09/12 22:46:51.252043 [INFO] Engine command: (tail-log)
+
+2024/09/12 22:46:51.252105 [INFO] Executing instruction: GetTailLogs
+2024/09/12 22:46:51.252108 [INFO] Tail Logs...
+2024/09/12 22:46:51.252446 [INFO] Running command: tail -n 100 /var/log/eb-engine.log
+2024/09/12 22:46:51.259853 [INFO] Running command: tail -n 100 /var/log/eb-hooks.log
+2024/09/12 22:46:51.380843 [INFO] Executing cleanup logic
+2024/09/12 22:46:51.381006 [INFO] CommandService Response: {"status":"SUCCESS","api_version":"1.0","results":[{"status":"SUCCESS","msg":"Engine execution has succeeded.","returncode":0,"events":[{"msg":"Instance deployment completed successfully.","timestamp":1726181211380,"severity":"INFO"}]}]}
+
+2024/09/12 22:46:51.381106 [INFO] Platform Engine finished execution on command: tail-log
+
+2024/09/12 22:47:49.061179 [INFO] Starting...
+2024/09/12 22:47:49.061233 [INFO] Starting EBPlatform-PlatformEngine
+2024/09/12 22:47:49.061253 [INFO] reading event message file
+2024/09/12 22:47:49.061451 [INFO] Engine received EB command cfn-hup-exec
+
+2024/09/12 22:47:49.121571 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBAutoScalingGroup --region us-east-2
+2024/09/12 22:47:49.641603 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-2:640168434762:stack/awseb-e-j8pht2gwki-stack/9695e3f0-7151-11ef-b46e-0a3e818036cb -r AWSEBBeanstalkMetadata --region us-east-2
+2024/09/12 22:47:50.110356 [INFO] checking whether command bundle-log is applicable to this instance...
+2024/09/12 22:47:50.110376 [INFO] this command is applicable to the instance, thus instance should execute command
+2024/09/12 22:47:50.110380 [INFO] Engine command: (bundle-log)
+
+2024/09/12 22:47:50.110442 [INFO] Executing instruction: GetBundleLogs
+2024/09/12 22:47:50.110452 [INFO] Bundle Logs...
